@@ -11,7 +11,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "../ui/dialog";
-import { generateScale, isValidColor, ColorScale, getContrast, getAPCA, getAPCARating, getWCAGRating } from '../../lib/color-utils';
+import { generateScale, isValidColor, ColorScale, getContrast, getAPCA, getAPCARating, getWCAGRating, getColorScaleInfo } from '../../lib/color-utils';
 import { toast } from 'sonner@2.0.3';
 import chroma from 'chroma-js';
 import { Check, ChevronDown, ArrowRightLeft } from 'lucide-react';
@@ -308,6 +308,32 @@ export function PaletteGenerator() {
                          />
                      </div>
 
+                     {/* Color Scale Optimization Indicator */}
+                     {(() => {
+                         const activePalette = palettes.find(p => p.id === activePaletteId);
+                         if (!activePalette) return null;
+                         const scaleInfo = getColorScaleInfo(activePalette.baseColor, activePalette.isDark);
+                         if (!scaleInfo.isOptimized) return null;
+                         
+                         return (
+                             <div className="rounded-lg p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800">
+                                 <div className="flex items-start gap-2">
+                                     <div className="h-5 w-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                         <Check className="h-3 w-3 text-white" />
+                                     </div>
+                                     <div className="flex-1 min-w-0">
+                                         <div className="text-xs font-medium text-blue-900 dark:text-blue-100 capitalize">
+                                             {scaleInfo.scaleType} Optimization Active
+                                         </div>
+                                         <div className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+                                             {scaleInfo.description}
+                                         </div>
+                                     </div>
+                                 </div>
+                             </div>
+                         );
+                     })()}
+
                      <div className="space-y-4 pt-4 border-t">
                         <div className="flex items-center justify-between">
                             <Label className="text-xs uppercase font-semibold text-muted-foreground">Easing & Adjustments</Label>
@@ -577,6 +603,49 @@ function PaletteDisplay({ palette }: { palette: PaletteConfig & { scale: ColorSc
                                     className="flex-1 flex md:flex-col items-center justify-between p-2 md:p-4 relative"
                                     style={{ backgroundColor: color }}
                                 >
+                                    {/* Lock indicator for step 9 (base color) */}
+                                    {i === 8 && (
+                                        <div className="absolute top-1 right-1 md:top-2 md:right-2">
+                                            <div className="h-4 w-4 rounded-full bg-black/20 dark:bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                                                <svg 
+                                                    width="10" 
+                                                    height="10" 
+                                                    viewBox="0 0 24 24" 
+                                                    fill="none" 
+                                                    stroke="currentColor" 
+                                                    strokeWidth="2.5" 
+                                                    strokeLinecap="round" 
+                                                    strokeLinejoin="round"
+                                                    className={getTextColorClass(palette.isDark, i)}
+                                                >
+                                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Hover indicator for step 10 (linked to step 9) */}
+                                    {i === 9 && (
+                                        <div className="absolute top-1 right-1 md:top-2 md:right-2">
+                                            <div className="h-4 w-4 rounded-full bg-black/20 dark:bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                                                <svg 
+                                                    width="10" 
+                                                    height="10" 
+                                                    viewBox="0 0 24 24" 
+                                                    fill="none" 
+                                                    stroke="currentColor" 
+                                                    strokeWidth="2.5" 
+                                                    strokeLinecap="round" 
+                                                    strokeLinejoin="round"
+                                                    className={getTextColorClass(palette.isDark, i)}
+                                                >
+                                                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
                                     <span className={`text-xs font-mono opacity-50 font-bold ${getTextColorClass(palette.isDark, i)}`}>
                                         {i + 1}
                                     </span>
@@ -593,7 +662,7 @@ function PaletteDisplay({ palette }: { palette: PaletteConfig & { scale: ColorSc
                             <div className="col-span-2 p-2 bg-background/50">App Bg</div>
                             <div className="col-span-3 p-2">Component Bg</div>
                             <div className="col-span-3 p-2 bg-background/50">Borders</div>
-                            <div className="col-span-2 p-2 text-primary font-medium bg-primary/5">Solid</div>
+                            <div className="col-span-2 p-2 text-primary font-medium bg-primary/5">Solid / Hover</div>
                             <div className="col-span-2 p-2">Text</div>
                         </div>
                     </>
