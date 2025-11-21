@@ -203,22 +203,22 @@ export function PaletteGenerator() {
   return (
     <div className="flex h-screen w-full flex-col md:flex-row bg-background text-foreground overflow-hidden">
       {/* Sidebar */}
-      <div className="w-full md:w-80 border-r bg-card p-4 flex flex-col gap-6 overflow-y-auto h-full">
+      <div className="w-full md:w-80 border-r border-border bg-card p-6 flex flex-col gap-6 overflow-y-auto h-full">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 font-bold text-xl">
-            <div className="h-6 w-6 rounded-md bg-primary gradient-to-br from-primary to-purple-500"></div>
-            RadixGen
+          <div className="flex items-center gap-3">
+            <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center">
+              <Sliders className="h-4 w-4 text-primary-foreground" />
+            </div>
+            <span className="text-xl font-semibold tracking-tight">Lumina</span>
+            <span className="px-1.5 py-0.5 text-[10px] font-medium bg-primary/10 text-primary rounded border border-primary/20">Beta</span>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => toast.info("Made by Figma Make")}>
-            <Sliders className="h-4 w-4" />
-          </Button>
         </div>
 
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Palettes</h3>
-                <Button variant="outline" size="sm" onClick={addPalette}>
-                    <Plus className="h-4 w-4 mr-1" /> Add
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Palettes</h3>
+                <Button variant="ghost" size="sm" onClick={addPalette} className="h-7 text-xs hover:bg-primary/10 hover:text-primary">
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Add
                 </Button>
             </div>
             
@@ -227,21 +227,21 @@ export function PaletteGenerator() {
                     {palettes.map(palette => (
                         <div 
                             key={palette.id}
-                            className={`group flex items-center gap-3 p-2 rounded-lg border transition-all cursor-pointer hover:bg-accent ${activePaletteId === palette.id ? 'border-primary bg-accent/50' : 'border-transparent'}`}
+                            className={`group flex items-center gap-3 p-2.5 rounded-lg border transition-all cursor-pointer hover:bg-accent/50 ${activePaletteId === palette.id ? 'border-primary/50 bg-primary/5' : 'border-transparent hover:border-border'}`}
                             onClick={() => setActivePaletteId(palette.id)}
                         >
                             <div 
-                                className="h-8 w-8 rounded-full shadow-sm border" 
+                                className="h-9 w-9 rounded-md shadow-sm border border-border" 
                                 style={{ backgroundColor: palette.baseColor }}
                             />
                             <div className="flex-1 min-w-0">
-                                <div className="font-medium truncate">{palette.name}</div>
-                                <div className="text-xs text-muted-foreground uppercase">{palette.baseColor}</div>
+                                <div className="font-medium text-sm truncate">{palette.name}</div>
+                                <div className="text-xs text-muted-foreground font-mono">{palette.baseColor}</div>
                             </div>
                              <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="opacity-0 group-hover:opacity-100 h-7 w-7 text-muted-foreground hover:text-destructive"
+                                className="opacity-0 group-hover:opacity-100 h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     removePalette(palette.id);
@@ -255,35 +255,36 @@ export function PaletteGenerator() {
             </ScrollArea>
         </div>
 
-        <div className="mt-auto pt-6 border-t">
+        <div className="mt-auto pt-6 border-t border-border">
              {activePaletteId && (
-                 <div className="space-y-4">
-                     <h3 className="font-medium">Edit {palettes.find(p => p.id === activePaletteId)?.name}</h3>
+                 <div className="space-y-5">
+                     <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Base Color</h3>
                      
-                     <div className="space-y-2">
-                         <Label>Name</Label>
+                     <div className="space-y-3">
+                         <Label className="text-xs text-muted-foreground">Name</Label>
                          <Input 
                             value={palettes.find(p => p.id === activePaletteId)?.name}
                             onChange={(e) => updatePalette(activePaletteId, { name: e.target.value })}
+                            className="bg-muted/30 border-border h-9 text-sm"
                          />
                      </div>
 
-                     <div className="space-y-2">
-                         <Label>Description (Usage Note)</Label>
+                     <div className="space-y-3">
+                         <Label className="text-xs text-muted-foreground">Description (Usage Note)</Label>
                          <Textarea 
-                            className="min-h-[80px] text-xs resize-none"
+                            className="min-h-[70px] text-xs resize-none bg-muted/30 border-border"
                             placeholder="e.g. Used for primary actions and high-priority elements."
                             value={palettes.find(p => p.id === activePaletteId)?.description || ''}
                             onChange={(e) => updatePalette(activePaletteId, { description: e.target.value })}
                          />
                      </div>
                      
-                     <div className="space-y-2">
-                         <Label>Base Color</Label>
+                     <div className="space-y-3">
+                         <Label className="text-xs text-muted-foreground">Base Color (Auto-detect format)</Label>
                          <div className="flex gap-2">
                             <Input 
                                 type="color" 
-                                className="w-12 p-1 h-10 cursor-pointer"
+                                className="w-12 p-1 h-9 cursor-pointer border-border bg-muted/30"
                                 value={palettes.find(p => p.id === activePaletteId)?.baseColor}
                                 onChange={(e) => updatePalette(activePaletteId, { baseColor: e.target.value })}
                             />
@@ -293,13 +294,14 @@ export function PaletteGenerator() {
                                     const val = e.target.value;
                                     updatePalette(activePaletteId, { baseColor: val });
                                 }}
+                                className="bg-muted/30 border-border h-9 font-mono text-sm"
                              />
                          </div>
                      </div>
 
-                     <div className="flex items-center justify-between">
-                         <Label className="flex items-center gap-2">
-                             {palettes.find(p => p.id === activePaletteId)?.isDark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                     <div className="flex items-center justify-between py-2">
+                         <Label className="flex items-center gap-2 text-xs text-muted-foreground">
+                             {palettes.find(p => p.id === activePaletteId)?.isDark ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
                              Dark Mode Scale
                          </Label>
                          <Switch 
@@ -375,7 +377,7 @@ export function PaletteGenerator() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-muted/20">
+      <div className="flex-1 overflow-y-auto p-8 bg-background">
         <div className="max-w-5xl mx-auto space-y-8">
             
             {/* Header */}
@@ -670,64 +672,112 @@ function PaletteContrast({ colors, isDark }: { colors: string[], isDark: boolean
     // Default selection: Step 1 (bg) or Step 11 (text)
     const [mode, setMode] = useState<'text-on-bg' | 'bg-on-text'>('text-on-bg');
     const [selectedIndex, setSelectedIndex] = useState<number>(mode === 'text-on-bg' ? 0 : 10);
+    const [view, setView] = useState<'cards' | 'matrix'>('cards');
 
     const selectedColor = colors[selectedIndex];
+
+    // Helper to get cell background color based on APCA value
+    const getMatrixCellBgColor = (apcaValue: number) => {
+        const absApca = Math.abs(apcaValue);
+        
+        // Color scale based on APCA values
+        if (absApca >= 90) return 'hsl(160, 85%, 35%)'; // Excellent - Green
+        if (absApca >= 75) return 'hsl(160, 70%, 45%)'; // Great - Light Green
+        if (absApca >= 60) return 'hsl(160, 50%, 55%)'; // Good - Lighter Green
+        if (absApca >= 45) return 'hsl(45, 85%, 50%)'; // Fair - Yellow/Orange
+        if (absApca >= 30) return 'hsl(25, 85%, 50%)'; // Poor - Orange
+        if (absApca >= 15) return 'hsl(5, 85%, 50%)'; // Very Poor - Red/Orange
+        return 'hsl(0, 70%, 45%)'; // Fail - Dark Red
+    };
+
+    // Helper to get text color for matrix cells
+    const getMatrixTextColor = (apcaValue: number) => {
+        const absApca = Math.abs(apcaValue);
+        return absApca >= 45 ? 'rgba(255, 255, 255, 0.95)' : 'rgba(0, 0, 0, 0.85)';
+    };
 
     return (
         <div className="p-6 space-y-6">
             <div className="flex items-center justify-between">
                  <div className="flex items-center gap-4 p-[0px] m-[0px]">
-                     <div className="flex items-center gap-2">
-                        <Label>Mode:</Label>
-                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm" className="w-40 justify-between px-[24px] py-[0px] text-[12px]">
-                                    {mode === 'text-on-bg' ? 'Text on Background' : 'Background on Text'}
-                                    <ChevronDown className="h-4 w-4 opacity-50" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <DropdownMenuItem onClick={() => { setMode('text-on-bg'); setSelectedIndex(0); }}>
-                                    Text on Background
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => { setMode('bg-on-text'); setSelectedIndex(10); }}>
-                                    Background on Text
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                     {/* View Toggle */}
+                     <div className="flex bg-muted rounded-lg p-1 gap-1">
+                         <Button 
+                             variant={view === 'cards' ? 'secondary' : 'ghost'} 
+                             size="sm" 
+                             className="h-7 text-xs px-3"
+                             onClick={() => setView('cards')}
+                         >
+                             Cards
+                         </Button>
+                         <Button 
+                             variant={view === 'matrix' ? 'secondary' : 'ghost'} 
+                             size="sm" 
+                             className="h-7 text-xs px-3"
+                             onClick={() => setView('matrix')}
+                         >
+                             Matrix
+                         </Button>
                      </div>
 
-                     <div className="flex items-center gap-2">
-                        <Label>{mode === 'text-on-bg' ? 'Background:' : 'Text Color:'}</Label>
-                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm" className="w-32 justify-between gap-2 text-[12px]">
-                                    <div className="flex items-center gap-2">
-                                        <div className="h-3 w-3 rounded-full border" style={{ backgroundColor: selectedColor }} />
-                                        Step {selectedIndex + 1}
-                                    </div>
-                                    <ChevronDown className="h-4 w-4 opacity-50" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="max-h-64 overflow-y-auto">
-                                {colors.map((c, i) => (
-                                    <DropdownMenuItem key={i} onClick={() => setSelectedIndex(i)} className="flex items-center gap-2">
-                                         <div className="h-3 w-3 rounded-full border" style={{ backgroundColor: c }} />
-                                         Step {i + 1}
-                                    </DropdownMenuItem>
-                                ))}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                     </div>
+                     {view === 'cards' && (
+                         <>
+                             <div className="h-4 w-px bg-border" />
+                             
+                             <div className="flex items-center gap-2">
+                                <Label>Mode:</Label>
+                                 <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" size="sm" className="w-40 justify-between px-[24px] py-[0px] text-[12px]">
+                                            {mode === 'text-on-bg' ? 'Text on Background' : 'Background on Text'}
+                                            <ChevronDown className="h-4 w-4 opacity-50" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuItem onClick={() => { setMode('text-on-bg'); setSelectedIndex(0); }}>
+                                            Text on Background
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => { setMode('bg-on-text'); setSelectedIndex(10); }}>
+                                            Background on Text
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                             </div>
+
+                             <div className="flex items-center gap-2">
+                                <Label>{mode === 'text-on-bg' ? 'Background:' : 'Text Color:'}</Label>
+                                 <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" size="sm" className="w-32 justify-between gap-2 text-[12px]">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-3 w-3 rounded-full border" style={{ backgroundColor: selectedColor }} />
+                                                Step {selectedIndex + 1}
+                                            </div>
+                                            <ChevronDown className="h-4 w-4 opacity-50" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent className="max-h-64 overflow-y-auto">
+                                        {colors.map((c, i) => (
+                                            <DropdownMenuItem key={i} onClick={() => setSelectedIndex(i)} className="flex items-center gap-2">
+                                                 <div className="h-3 w-3 rounded-full border" style={{ backgroundColor: c }} />
+                                                 Step {i + 1}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                             </div>
+                         </>
+                     )}
                  </div>
                  
                  <div className="text-xs text-muted-foreground">
-                    <span className="font-medium">APCA</span> (Advanced Perceptual Contrast Algorithm) & <span className="font-medium">WCAG 2.1</span>
+                    <span className="font-medium">APCA</span> (Advanced Perceptual Contrast Algorithm) {view === 'cards' && '& '}<span className="font-medium">{view === 'cards' && 'WCAG 2.1'}</span>
                  </div>
             </div>
 
-            {/* Results Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {view === 'cards' ? (
+                /* Results Grid */
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {colors.map((color, i) => {
                     if (i === selectedIndex) return null; // Skip self
 
@@ -782,6 +832,115 @@ function PaletteContrast({ colors, isDark }: { colors: string[], isDark: boolean
                     );
                 })}
             </div>
+            ) : (
+                /* Matrix View */
+                <div className="overflow-x-auto">
+                    <div className="inline-block min-w-full px-[8px] py-[0px]">
+                        <div className="grid gap-0" style={{ 
+                            gridTemplateColumns: `60px repeat(${colors.length}, minmax(70px, 1fr))`,
+                        }}>
+                            {/* Top-left corner cell */}
+                            <div className="border border-border bg-muted/50 flex items-center justify-center p-2">
+                                <span className="text-[10px] font-medium text-muted-foreground">Bg / Fg</span>
+                            </div>
+                            
+                            {/* Column headers (Foreground colors) */}
+                            {colors.map((color, i) => (
+                                <div 
+                                    key={`header-${i}`}
+                                    className="border border-border bg-muted/30 flex items-center justify-center p-2"
+                                >
+                                    <div className="flex flex-col items-center gap-1">
+                                        <div className="h-4 w-4 rounded-full border-2 border-background shadow-sm" style={{ backgroundColor: color }} />
+                                        <span className="text-[10px] font-medium">{i + 1}</span>
+                                    </div>
+                                </div>
+                            ))}
+                            
+                            {/* Matrix rows */}
+                            {colors.map((bgColor, bgIndex) => (
+                                <React.Fragment key={`row-${bgIndex}`}>
+                                    {/* Row header (Background color) */}
+                                    <div className="border border-border bg-muted/30 flex items-center justify-center p-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] font-medium">{bgIndex + 1}</span>
+                                            <div className="h-4 w-4 rounded-full border-2 border-background shadow-sm" style={{ backgroundColor: bgColor }} />
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Matrix cells */}
+                                    {colors.map((fgColor, fgIndex) => {
+                                        // Diagonal (same color)
+                                        if (bgIndex === fgIndex) {
+                                            return (
+                                                <div 
+                                                    key={`cell-${bgIndex}-${fgIndex}`}
+                                                    className="border border-border flex items-center justify-center p-3 bg-muted/80"
+                                                >
+                                                    <span className="text-xl text-muted-foreground/30 font-bold">-</span>
+                                                </div>
+                                            );
+                                        }
+                                        
+                                        const apca = getAPCA(fgColor, bgColor);
+                                        const absApca = Math.abs(apca);
+                                        const bgColorForCell = getMatrixCellBgColor(apca);
+                                        const textColor = getMatrixTextColor(apca);
+                                        
+                                        return (
+                                            <div 
+                                                key={`cell-${bgIndex}-${fgIndex}`}
+                                                className="border border-border flex items-center justify-center p-3 transition-all hover:scale-105 hover:z-10 hover:shadow-lg cursor-default"
+                                                style={{ 
+                                                    backgroundColor: bgColorForCell,
+                                                }}
+                                                title={`Lc ${absApca.toFixed(1)} (Step ${bgIndex + 1} bg, Step ${fgIndex + 1} fg)`}
+                                            >
+                                                <span className="text-xs font-bold" style={{ color: textColor }}>
+                                                    {absApca.toFixed(1)}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </React.Fragment>
+                            ))}
+                        </div>
+                        
+                        {/* Legend */}
+                        <div className="mt-6 flex flex-wrap items-center gap-3 text-xs">
+                            <span className="font-medium text-muted-foreground">Legend:</span>
+                            <div className="flex items-center gap-1.5">
+                                <div className="h-3 w-3 rounded" style={{ backgroundColor: 'hsl(160, 85%, 35%)' }} />
+                                <span>90+ (Excellent)</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="h-3 w-3 rounded" style={{ backgroundColor: 'hsl(160, 70%, 45%)' }} />
+                                <span>75-89 (Great)</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="h-3 w-3 rounded" style={{ backgroundColor: 'hsl(160, 50%, 55%)' }} />
+                                <span>60-74 (Good)</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="h-3 w-3 rounded" style={{ backgroundColor: 'hsl(45, 85%, 50%)' }} />
+                                <span>45-59 (Fair)</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="h-3 w-3 rounded" style={{ backgroundColor: 'hsl(25, 85%, 50%)' }} />
+                                <span>30-44 (Poor)</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="h-3 w-3 rounded" style={{ backgroundColor: 'hsl(5, 85%, 50%)' }} />
+                                <span>15-29 (Very Poor)</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="h-3 w-3 rounded" style={{ backgroundColor: 'hsl(0, 70%, 45%)' }} />
+                                <span>&lt;15 (Fail)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
