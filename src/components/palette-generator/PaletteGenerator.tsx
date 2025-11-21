@@ -551,7 +551,7 @@ export function PaletteGenerator() {
 }
 
 function PaletteDisplay({ palette }: { palette: PaletteConfig & { scale: ColorScale } }) {
-    const [view, setView] = useState<'scale' | 'preview' | 'contrast'>('scale');
+    const [view, setView] = useState<'scale' | 'contrast'>('scale');
 
     return (
         <Card className="overflow-hidden border-0 shadow-sm bg-background">
@@ -570,14 +570,6 @@ function PaletteDisplay({ palette }: { palette: PaletteConfig & { scale: ColorSc
                                 onClick={() => setView('scale')}
                             >
                                 Scale
-                            </Button>
-                            <Button 
-                                variant={view === 'preview' ? 'secondary' : 'ghost'} 
-                                size="sm" 
-                                className="h-6 text-xs"
-                                onClick={() => setView('preview')}
-                            >
-                                Preview
                             </Button>
                             <Button 
                                 variant={view === 'contrast' ? 'secondary' : 'ghost'} 
@@ -666,8 +658,6 @@ function PaletteDisplay({ palette }: { palette: PaletteConfig & { scale: ColorSc
                             <div className="col-span-2 p-2">Text</div>
                         </div>
                     </>
-                ) : view === 'preview' ? (
-                    <PalettePreview colors={palette.scale.colors} isDark={palette.isDark} />
                 ) : (
                     <PaletteContrast colors={palette.scale.colors} isDark={palette.isDark} />
                 )}
@@ -791,99 +781,6 @@ function PaletteContrast({ colors, isDark }: { colors: string[], isDark: boolean
                         </div>
                     );
                 })}
-            </div>
-        </div>
-    );
-}
-
-
-function PalettePreview({ colors, isDark }: { colors: string[], isDark: boolean }) {
-    // Radix Mapping
-    const c = {
-        appBg: colors[0],
-        subtleBg: colors[1],
-        uiBg: colors[2],
-        hover: colors[3],
-        active: colors[4],
-        border: colors[5],
-        interactBorder: colors[6],
-        hoverBorder: colors[7],
-        solid: colors[8],
-        solidHover: colors[9],
-        textLow: colors[10],
-        textHigh: colors[11],
-    };
-
-    // Dynamic text color for the solid button
-    const solidText = chroma.contrast(c.solid, '#ffffff') > 4.5 ? '#ffffff' : '#000000';
-
-    return (
-        <div className="p-8 flex flex-col gap-8" style={{ backgroundColor: c.appBg, color: c.textHigh }}>
-            <div className="flex gap-4 items-start">
-                {/* Card Example */}
-                <div 
-                    className="p-6 rounded-lg border w-64 shadow-sm flex flex-col gap-4"
-                    style={{ 
-                        backgroundColor: c.subtleBg, 
-                        borderColor: c.border 
-                    }}
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ backgroundColor: c.uiBg }}>
-                            <div className="h-5 w-5 rounded-full" style={{ backgroundColor: c.solid }}></div>
-                        </div>
-                        <div>
-                            <div className="text-sm font-bold" style={{ color: c.textHigh }}>Card Title</div>
-                            <div className="text-xs" style={{ color: c.textLow }}>Subtitle text</div>
-                        </div>
-                    </div>
-                    <div className="h-2 rounded-full w-3/4" style={{ backgroundColor: c.uiBg }}></div>
-                    <div className="h-2 rounded-full w-1/2" style={{ backgroundColor: c.uiBg }}></div>
-                    
-                    <div className="flex gap-2 mt-2">
-                        <button 
-                            className="px-3 py-1.5 text-xs font-medium rounded transition-colors"
-                            style={{ backgroundColor: c.solid, color: solidText }}
-                        >
-                            Primary
-                        </button>
-                         <button 
-                            className="px-3 py-1.5 text-xs font-medium rounded border transition-colors"
-                            style={{ borderColor: c.interactBorder, color: c.textHigh }}
-                        >
-                            Secondary
-                        </button>
-                    </div>
-                </div>
-
-                {/* Form Elements */}
-                <div className="p-6 rounded-lg w-64 flex flex-col gap-4" style={{ backgroundColor: 'transparent' }}>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-xs font-medium" style={{ color: c.textHigh }}>Email Address</label>
-                        <input 
-                            type="text" 
-                            className="px-3 py-2 rounded-md text-sm border outline-none focus:ring-2"
-                            style={{ 
-                                backgroundColor: c.uiBg, 
-                                borderColor: c.interactBorder,
-                                color: c.textHigh,
-                                // We can't easily do focus ring via inline styles without pseudo classes, 
-                                // but this simulates the look
-                            }}
-                            placeholder="name@example.com"
-                        />
-                    </div>
-                    
-                     <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 rounded border flex items-center justify-center" style={{ borderColor: c.solid, backgroundColor: c.solid }}>
-                             {/* Check icon */}
-                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={solidText} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                             </svg>
-                        </div>
-                        <span className="text-xs" style={{ color: c.textHigh }}>Remember me</span>
-                    </div>
-                </div>
             </div>
         </div>
     );
