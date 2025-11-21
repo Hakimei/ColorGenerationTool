@@ -41,7 +41,7 @@ interface SavedPreset {
   createdAt: number;
 }
 
-export function PaletteGenerator() {
+export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: boolean; toggleDarkMode: () => void }) {
   const [palettes, setPalettes] = useState<PaletteConfig[]>([
     { id: '1', name: 'Primary', baseColor: '#3e63dd', isDark: false, hueShift: 0, saturationScale: 1 },
     { id: '2', name: 'Neutral', baseColor: '#71717a', isDark: false, hueShift: 0, saturationScale: 1 },
@@ -388,6 +388,14 @@ export function PaletteGenerator() {
                         <p className="text-muted-foreground">Radix-style color scales for your next project.</p>
                     </div>
                     <div className="flex items-center gap-4">
+                        <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={toggleDarkMode}
+                            className="h-9 w-9 hover:bg-primary/10"
+                        >
+                            {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                        </Button>
                         <div className="flex bg-muted/50 p-1 rounded-lg border">
                             <Button 
                                 variant={activeView === 'editor' ? 'secondary' : 'ghost'} 
