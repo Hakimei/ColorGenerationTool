@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Sliders, Plus, Trash2, Copy, Moon, Sun, RefreshCw, Save, FolderOpen, BookOpen, Edit3, Download, Upload } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { Sliders, Plus, Trash2, Copy, Moon, Sun, RefreshCw, Save, FolderOpen, BookOpen, Edit3, Download, Upload, ArrowUp } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -53,6 +53,23 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [newPresetName, setNewPresetName] = useState('');
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+  const mainContentRef = useRef<HTMLDivElement>(null);
+  const [showGoToTop, setShowGoToTop] = useState(false);
+
+  // Track scroll position of main content area
+  useEffect(() => {
+    const el = mainContentRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      setShowGoToTop(el.scrollTop > 400);
+    };
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   // Load from localStorage on mount
   React.useEffect(() => {
@@ -170,6 +187,22 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
       })
     }));
   }, [palettes]);
+
+  // Auto-scroll to the active palette's display section
+  useEffect(() => {
+    if (!activePaletteId) return;
+    // Small delay to ensure DOM is updated after palette changes
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`palette-${activePaletteId}`);
+      const container = mainContentRef.current;
+      if (el && container) {
+        const offset = 32; // 2rem
+        const elTop = el.offsetTop - container.offsetTop;
+        container.scrollTo({ top: Math.max(0, elTop - offset), behavior: 'smooth' });
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [activePaletteId, activeView]);
 
   const updatePalette = (id: string, updates: Partial<PaletteConfig>) => {
     setPalettes(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
@@ -469,7 +502,7 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto p-8 bg-background">
+      <div ref={mainContentRef} className="flex-1 overflow-y-auto p-8 bg-background relative">
         <div className="max-w-5xl mx-auto space-y-8">
             
             {/* Header */}
@@ -655,6 +688,18 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
             </div>
 
         </div>
+
+        {/* Floating Go to Top button */}
+        {showGoToTop && (
+          <button
+            onClick={scrollToTop}
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all duration-300 opacity-90 hover:opacity-100 hover:shadow-xl cursor-pointer"
+            aria-label="Go to top"
+          >
+            <ArrowUp className="h-4 w-4" />
+            <span className="text-sm hidden sm:inline">Top</span>
+          </button>
+        )}
       </div>
     </div>
   );
@@ -705,7 +750,7 @@ function PaletteDisplay({ palette }: { palette: PaletteConfig & { scale: ColorSc
     };
 
     return (
-        <Card className="overflow-hidden border-0 shadow-sm bg-background">
+        <Card id={`palette-${palette.id}`} className="overflow-hidden border-0 shadow-sm bg-background">
             <CardHeader className="pb-4 border-b bg-muted/10">
                 <div className="flex items-center justify-between">
                      <div className="flex items-center gap-2">

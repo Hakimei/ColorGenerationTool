@@ -147,7 +147,7 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
       </div>
 
       {palettes.map((palette) => (
-        <section key={palette.id} className="space-y-6">
+        <section key={palette.id} id={`palette-${palette.id}`} className="space-y-6">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
                 <div 
