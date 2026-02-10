@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Sliders, Plus, Trash2, Copy, Moon, Sun, RefreshCw, Save, FolderOpen, BookOpen, Edit3 } from 'lucide-react';
+import { Sliders, Plus, Trash2, Copy, Moon, Sun, RefreshCw, Save, FolderOpen, BookOpen, Edit3, Download, Upload } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -99,6 +99,66 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
     setSavedPresets(updated);
     localStorage.setItem('radixgen_presets', JSON.stringify(updated));
     toast.success("Preset deleted");
+  };
+
+  const exportPresets = () => {
+    const data = {
+      _meta: { app: 'Lumina', version: 1, exportedAt: new Date().toISOString() },
+      presets: savedPresets,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `lumina-presets-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${savedPresets.length} preset(s)`);
+  };
+
+  const importPresets = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const raw = JSON.parse(ev.target?.result as string);
+          let incoming: SavedPreset[] = [];
+          // Support both wrapped format and raw array
+          if (raw._meta && Array.isArray(raw.presets)) {
+            incoming = raw.presets;
+          } else if (Array.isArray(raw)) {
+            incoming = raw;
+          } else {
+            throw new Error('Unrecognized format');
+          }
+          // Validate shape
+          for (const p of incoming) {
+            if (!p.id || !p.name || !Array.isArray(p.palettes)) {
+              throw new Error('Invalid preset structure');
+            }
+          }
+          // Deduplicate by id
+          const existingIds = new Set(savedPresets.map(p => p.id));
+          const newPresets = incoming.filter(p => !existingIds.has(p.id));
+          const merged = [...savedPresets, ...newPresets];
+          setSavedPresets(merged);
+          localStorage.setItem('radixgen_presets', JSON.stringify(merged));
+          toast.success(`Imported ${newPresets.length} new preset(s)${incoming.length - newPresets.length > 0 ? `, ${incoming.length - newPresets.length} duplicate(s) skipped` : ''}`);
+        } catch (err) {
+          console.error('Import failed', err);
+          toast.error('Import failed — invalid or corrupted file.');
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
   };
 
   const generatedPalettes = useMemo(() => {
@@ -569,6 +629,14 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
                                         </div>
                                     )}
                                 </ScrollArea>
+                                <div className="flex items-center gap-2 pt-4 border-t">
+                                    <Button variant="outline" size="sm" className="gap-2 flex-1" onClick={exportPresets} disabled={savedPresets.length === 0}>
+                                        <Download className="h-3.5 w-3.5" /> Export All
+                                    </Button>
+                                    <Button variant="outline" size="sm" className="gap-2 flex-1" onClick={importPresets}>
+                                        <Upload className="h-3.5 w-3.5" /> Import
+                                    </Button>
+                                </div>
                             </DialogContent>
                         </Dialog>
                     </div>
