@@ -600,6 +600,42 @@ function PaletteDisplay({ palette }: { palette: PaletteConfig & { scale: ColorSc
         return generateAlphaScale(palette.scale, palette.isDark);
     }, [palette.scale, palette.isDark]);
 
+    const copyToClipboard = (text: string) => {
+        const fallback = (t: string): boolean => {
+            try {
+                const textArea = document.createElement("textarea");
+                textArea.value = t;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-9999px";
+                textArea.style.top = "0";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                return successful;
+            } catch {
+                return false;
+            }
+        };
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text)
+                    .then(() => toast.success("Copied!"))
+                    .catch(() => {
+                        if (fallback(text)) { toast.success("Copied!"); }
+                        else { toast.error("Failed to copy. Please copy manually."); }
+                    });
+            } else {
+                if (fallback(text)) { toast.success("Copied!"); }
+                else { toast.error("Failed to copy. Please copy manually."); }
+            }
+        } catch {
+            if (fallback(text)) { toast.success("Copied!"); }
+            else { toast.error("Failed to copy. Please copy manually."); }
+        }
+    };
+
     return (
         <Card className="overflow-hidden border-0 shadow-sm bg-background">
             <CardHeader className="pb-4 border-b bg-muted/10">
@@ -647,8 +683,10 @@ function PaletteDisplay({ palette }: { palette: PaletteConfig & { scale: ColorSc
                             {palette.scale.colors.map((color, i) => (
                                 <div 
                                     key={i} 
-                                    className="flex-1 flex md:flex-col items-center justify-between p-2 md:p-4 relative"
+                                    className="flex-1 flex md:flex-col items-center justify-between p-2 md:p-4 relative group cursor-pointer transition-all hover:brightness-110"
                                     style={{ backgroundColor: color }}
+                                    onClick={() => copyToClipboard(color)}
+                                    title={`Click to copy ${color}`}
                                 >
                                     {/* Lock indicator for step 9 (base color) */}
                                     {i === 8 && (
@@ -700,6 +738,15 @@ function PaletteDisplay({ palette }: { palette: PaletteConfig & { scale: ColorSc
                                     <span className={`text-xs font-mono uppercase ${getTextColorClass(palette.isDark, i)}`}>
                                         {color.replace('#', '')}
                                     </span>
+                                    
+                                    {/* Copy indicator on hover */}
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                        <div className={`px-2 py-1 rounded text-[10px] font-medium backdrop-blur-sm ${
+                                            palette.isDark ? 'bg-white/20 text-white' : (i < 6 ? 'bg-black/20 text-white' : 'bg-white/20 text-white')
+                                        }`}>
+                                            <Copy className="h-3 w-3 inline mr-1" />Copy
+                                        </div>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -746,14 +793,48 @@ function AlphaScaleView({
     setAlphaFormat: (f: 'rgba' | 'hsla' | 'hex8') => void;
 }) {
     const copyToClipboard = (text: string) => {
+        const fallback = (t: string): boolean => {
+            try {
+                const textArea = document.createElement("textarea");
+                textArea.value = t;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-9999px";
+                textArea.style.top = "0";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                return successful;
+            } catch {
+                return false;
+            }
+        };
+
         try {
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(text)
                     .then(() => toast.success("Copied!"))
-                    .catch(() => toast.error("Copy failed"));
+                    .catch(() => {
+                        if (fallback(text)) {
+                            toast.success("Copied!");
+                        } else {
+                            toast.error("Failed to copy. Please copy manually.");
+                        }
+                    });
+            } else {
+                if (fallback(text)) {
+                    toast.success("Copied!");
+                } else {
+                    toast.error("Failed to copy. Please copy manually.");
+                }
             }
         } catch {
-            toast.error("Copy failed");
+            if (fallback(text)) {
+                toast.success("Copied!");
+            } else {
+                toast.error("Failed to copy. Please copy manually.");
+            }
         }
     };
 

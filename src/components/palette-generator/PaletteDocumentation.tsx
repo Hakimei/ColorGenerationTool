@@ -13,9 +13,55 @@ interface PaletteDocumentationProps {
 
 export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
 
+  const fallbackCopy = (text: string) => {
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.style.top = "0";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      if (successful) {
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
   const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success(`Copied ${label} to clipboard`);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+          .then(() => {
+            toast.success(`Copied ${label} to clipboard`);
+          })
+          .catch(() => {
+            if (fallbackCopy(text)) {
+              toast.success(`Copied ${label} to clipboard`);
+            } else {
+              toast.error("Failed to copy. Please copy manually.");
+            }
+          });
+      } else {
+        if (fallbackCopy(text)) {
+          toast.success(`Copied ${label} to clipboard`);
+        } else {
+          toast.error("Failed to copy. Please copy manually.");
+        }
+      }
+    } catch {
+      if (fallbackCopy(text)) {
+        toast.success(`Copied ${label} to clipboard`);
+      } else {
+        toast.error("Failed to copy. Please copy manually.");
+      }
+    }
   };
 
   const downloadJson = () => {
