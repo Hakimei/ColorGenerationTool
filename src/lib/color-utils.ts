@@ -5,6 +5,22 @@ export interface ColorScale {
   colors: string[]; // Array of 12 hex codes
 }
 
+export interface AlphaColor {
+  rgba: string;       // rgba(r, g, b, a)
+  hsla: string;       // hsla(h, s%, l%, a)
+  hex8: string;       // #RRGGBBAA
+  alpha: number;      // 0-1 alpha value
+  r: number;
+  g: number;
+  b: number;
+}
+
+export interface AlphaColorScale {
+  name: string;
+  colors: AlphaColor[]; // Array of 12 alpha colors
+  background: string;   // The background color used for computation
+}
+
 // ===== LIGHT MODE LIGHTNESS SCALES =====
 
 export const DEFAULT_LIGHTNESS_SCALE = [
@@ -426,5 +442,173 @@ export function getColorScaleInfo(baseColor: string, isDark: boolean): {
       description: 'Standard scale',
       isOptimized: false
     };
+  }
+}
+
+// ===== ALPHA COLOR GENERATION =====
+// Radix UI provides alpha color scales (e.g., blueA, redA) that are transparent
+// equivalents of the solid colors. When composited over a specific background,
+// they produce the same visual result as the solid color.
+
+/**
+ * Converts a solid color to its alpha equivalent over a given background.
+ * Finds the minimum alpha value where all RGB channels remain in [0, 255].
+ * 
+ * The compositing formula is: result = fg * alpha + bg * (1 - alpha)
+ * Solving for fg: fg = (result - bg * (1 - alpha)) / alpha
+ * 
+ * We want the lowest alpha where fg channels are all valid [0, 255].
+ */
+export function solidToAlpha(solidColor: string, backgroundColor: string): AlphaColor {
+  try {
+    const solid = chroma(solidColor).rgb();
+    const bg = chroma(backgroundColor).rgb();
+    
+    const sr = solid[0], sg = solid[1], sb = solid[2];
+    const br = bg[0], bg_ = bg[1], bb = bg[2];
+    
+    // Find minimum alpha where all foreground channels are in [0, 255]
+    // For each channel: fg = (solid - bg * (1 - alpha)) / alpha
+    // fg must be in [0, 255], so:
+    //   fg >= 0: solid - bg * (1 - alpha) >= 0 => alpha >= 1 - solid/bg (if bg > 0)
+    //   fg <= 255: solid - bg * (1 - alpha) <= 255 * alpha => alpha >= (solid - bg) / (255 - bg) (if bg < 255)
+    
+    let minAlpha = 0.001; // Start with nearly transparent
+    
+    const channels = [
+      { s: sr, b: br },
+      { s: sg, b: bg_ },
+      { s: sb, b: bb },
+    ];
+    
+    for (const { s, b } of channels) {
+      if (s === b) continue; // Channel matches background, any alpha works
+      
+      if (s < b) {
+        // Foreground needs to be less than background
+        // fg = (s - b * (1 - a)) / a = (s - b + b*a) / a = s/a - b/a + b
+        // For fg >= 0: s - b*(1-a) >= 0 => a >= 1 - s/b (when b > 0)
+        // For fg <= 255: always true since s < b means fg < b < 255
+        if (b > 0) {
+          const needed = (b - s) / b;
+          minAlpha = Math.max(minAlpha, needed);
+        }
+      } else {
+        // Foreground needs to be greater than background (s > b)
+        // For fg <= 255: (s - b*(1-a))/a <= 255
+        //   s - b + b*a <= 255*a
+        //   s - b <= a*(255 - b)
+        //   a >= (s - b) / (255 - b) (when b < 255)
+        if (b < 255) {
+          const needed = (s - b) / (255 - b);
+          minAlpha = Math.max(minAlpha, needed);
+        } else {
+          // bg is 255, and solid > 255 is impossible, so s <= 255
+          // If s == b == 255, already handled above
+          minAlpha = Math.max(minAlpha, 1);
+        }
+      }
+    }
+    
+    // Round alpha to 3 decimal places for cleaner output
+    // But ensure it doesn't go below the minimum
+    let alpha = Math.ceil(minAlpha * 1000) / 1000;
+    alpha = Math.min(1, Math.max(0.001, alpha));
+    
+    // Calculate the foreground RGB values for this alpha
+    let fgR = Math.round((sr - br * (1 - alpha)) / alpha);
+    let fgG = Math.round((sg - bg_ * (1 - alpha)) / alpha);
+    let fgB = Math.round((sb - bb * (1 - alpha)) / alpha);
+    
+    // Clamp to valid range
+    fgR = Math.max(0, Math.min(255, fgR));
+    fgG = Math.max(0, Math.min(255, fgG));
+    fgB = Math.max(0, Math.min(255, fgB));
+    
+    // Format alpha for display (remove trailing zeros)
+    const alphaStr = alpha === 1 ? '1' : alpha.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
+    
+    // Generate hex8 (with alpha byte)
+    const alphaByte = Math.round(alpha * 255);
+    const hex8 = `#${fgR.toString(16).padStart(2, '0')}${fgG.toString(16).padStart(2, '0')}${fgB.toString(16).padStart(2, '0')}${alphaByte.toString(16).padStart(2, '0')}`.toUpperCase();
+    
+    // Generate HSLA
+    const fgChroma = chroma(fgR, fgG, fgB);
+    const h = fgChroma.get('hsl.h') || 0;
+    const s = fgChroma.get('hsl.s') * 100;
+    const l = fgChroma.get('hsl.l') * 100;
+    
+    return {
+      rgba: `rgba(${fgR}, ${fgG}, ${fgB}, ${alphaStr})`,
+      hsla: `hsla(${Math.round(h)}, ${Math.round(s)}%, ${Math.round(l)}%, ${alphaStr})`,
+      hex8,
+      alpha,
+      r: fgR,
+      g: fgG,
+      b: fgB,
+    };
+  } catch (e) {
+    console.error('Error converting to alpha:', e);
+    return {
+      rgba: 'rgba(0, 0, 0, 1)',
+      hsla: 'hsla(0, 0%, 0%, 1)',
+      hex8: '#000000FF',
+      alpha: 1,
+      r: 0,
+      g: 0,
+      b: 0,
+    };
+  }
+}
+
+/**
+ * Generates a full alpha color scale from a solid color scale.
+ * Each solid color is converted to its alpha equivalent against the given background.
+ */
+export function generateAlphaScale(
+  solidScale: ColorScale,
+  isDark: boolean,
+  customBackground?: string
+): AlphaColorScale {
+  const background = customBackground || (isDark ? '#111113' : '#FFFFFF');
+  
+  const alphaColors = solidScale.colors.map(solidColor => {
+    return solidToAlpha(solidColor, background);
+  });
+  
+  return {
+    name: `${solidScale.name}A`,
+    colors: alphaColors,
+    background,
+  };
+}
+
+/**
+ * Formats an alpha color value in the specified format
+ */
+export function formatAlphaColor(alpha: AlphaColor, format: 'rgba' | 'hsla' | 'hex8'): string {
+  switch (format) {
+    case 'rgba': return alpha.rgba;
+    case 'hsla': return alpha.hsla;
+    case 'hex8': return alpha.hex8;
+    default: return alpha.rgba;
+  }
+}
+
+/**
+ * Composites an alpha color over a background to verify visual equivalence
+ */
+export function compositeAlphaOver(alphaColor: AlphaColor, backgroundColor: string): string {
+  try {
+    const bg = chroma(backgroundColor).rgb();
+    const a = alphaColor.alpha;
+    
+    const r = Math.round(alphaColor.r * a + bg[0] * (1 - a));
+    const g = Math.round(alphaColor.g * a + bg[1] * (1 - a));
+    const b = Math.round(alphaColor.b * a + bg[2] * (1 - a));
+    
+    return chroma(r, g, b).hex();
+  } catch {
+    return '#000000';
   }
 }

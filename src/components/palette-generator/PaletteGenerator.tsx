@@ -11,7 +11,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "../ui/dialog";
-import { generateScale, isValidColor, ColorScale, getContrast, getAPCA, getAPCARating, getWCAGRating, getColorScaleInfo } from '../../lib/color-utils';
+import { generateScale, isValidColor, ColorScale, getContrast, getAPCA, getAPCARating, getWCAGRating, getColorScaleInfo, generateAlphaScale, AlphaColorScale, AlphaColor, formatAlphaColor } from '../../lib/color-utils';
 import { toast } from 'sonner@2.0.3';
 import chroma from 'chroma-js';
 import { Check, ChevronDown, ArrowRightLeft } from 'lucide-react';
@@ -183,9 +183,17 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
 
   const generateCssVariables = () => {
     let css = ':root {\n';
+    css += '  /* Solid Colors */\n';
     generatedPalettes.forEach(p => {
       p.scale.colors.forEach((color, index) => {
         css += `  --${p.name.toLowerCase().replace(/\s+/g, '-')}-${index + 1}: ${color};\n`;
+      });
+    });
+    css += '\n  /* Alpha Colors */\n';
+    generatedPalettes.forEach(p => {
+      const alphaScale = generateAlphaScale(p.scale, p.isDark);
+      alphaScale.colors.forEach((alpha, index) => {
+        css += `  --${p.name.toLowerCase().replace(/\s+/g, '-')}-a${index + 1}: ${alpha.rgba};\n`;
       });
     });
     css += '}';
@@ -193,9 +201,13 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
   };
   
   const generateJson = () => {
-      const obj: Record<string, string[]> = {};
+      const obj: Record<string, { solid: string[], alpha: string[] }> = {};
       generatedPalettes.forEach(p => {
-          obj[p.name] = p.scale.colors;
+          const alphaScale = generateAlphaScale(p.scale, p.isDark);
+          obj[p.name] = {
+              solid: p.scale.colors,
+              alpha: alphaScale.colors.map(a => a.rgba),
+          };
       });
       return JSON.stringify(obj, null, 2);
   };
@@ -581,7 +593,12 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
 }
 
 function PaletteDisplay({ palette }: { palette: PaletteConfig & { scale: ColorScale } }) {
-    const [view, setView] = useState<'scale' | 'contrast'>('scale');
+    const [view, setView] = useState<'scale' | 'alpha' | 'contrast'>('scale');
+    const [alphaFormat, setAlphaFormat] = useState<'rgba' | 'hsla' | 'hex8'>('rgba');
+    
+    const alphaScale = useMemo(() => {
+        return generateAlphaScale(palette.scale, palette.isDark);
+    }, [palette.scale, palette.isDark]);
 
     return (
         <Card className="overflow-hidden border-0 shadow-sm bg-background">
@@ -599,7 +616,15 @@ function PaletteDisplay({ palette }: { palette: PaletteConfig & { scale: ColorSc
                                 className="h-6 text-xs"
                                 onClick={() => setView('scale')}
                             >
-                                Scale
+                                Solid
+                            </Button>
+                            <Button 
+                                variant={view === 'alpha' ? 'secondary' : 'ghost'} 
+                                size="sm" 
+                                className="h-6 text-xs"
+                                onClick={() => setView('alpha')}
+                            >
+                                Alpha
                             </Button>
                             <Button 
                                 variant={view === 'contrast' ? 'secondary' : 'ghost'} 
@@ -688,11 +713,227 @@ function PaletteDisplay({ palette }: { palette: PaletteConfig & { scale: ColorSc
                             <div className="col-span-2 p-2">Text</div>
                         </div>
                     </>
+                ) : view === 'alpha' ? (
+                    <AlphaScaleView 
+                        alphaScale={alphaScale} 
+                        solidColors={palette.scale.colors}
+                        isDark={palette.isDark} 
+                        paletteName={palette.name}
+                        alphaFormat={alphaFormat}
+                        setAlphaFormat={setAlphaFormat}
+                    />
                 ) : (
                     <PaletteContrast colors={palette.scale.colors} isDark={palette.isDark} />
                 )}
             </CardContent>
         </Card>
+    );
+}
+
+function AlphaScaleView({ 
+    alphaScale, 
+    solidColors,
+    isDark, 
+    paletteName, 
+    alphaFormat,
+    setAlphaFormat
+}: { 
+    alphaScale: AlphaColorScale; 
+    solidColors: string[];
+    isDark: boolean; 
+    paletteName: string;
+    alphaFormat: 'rgba' | 'hsla' | 'hex8';
+    setAlphaFormat: (f: 'rgba' | 'hsla' | 'hex8') => void;
+}) {
+    const copyToClipboard = (text: string) => {
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text)
+                    .then(() => toast.success("Copied!"))
+                    .catch(() => toast.error("Copy failed"));
+            }
+        } catch {
+            toast.error("Copy failed");
+        }
+    };
+
+    // Checkerboard pattern for transparency visualization
+    const checkerBg = `repeating-conic-gradient(${isDark ? '#1a1a1a' : '#e5e5e5'} 0% 25%, ${isDark ? '#2a2a2a' : '#ffffff'} 0% 50%) 0 0 / 12px 12px`;
+    
+    return (
+        <div className="space-y-0">
+            {/* Header bar with info and format selector */}
+            <div className="flex items-center justify-between px-4 py-3 bg-muted/20 border-b">
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded" style={{ backgroundColor: alphaScale.background }} />
+                        <span className="text-xs text-muted-foreground">
+                            Background: <span className="font-mono">{alphaScale.background}</span>
+                        </span>
+                    </div>
+                    <span className="text-xs text-muted-foreground/60">|</span>
+                    <span className="text-xs text-muted-foreground">
+                        {paletteName}A — Transparent equivalents that composite to match solid colors
+                    </span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground">Format:</Label>
+                    <div className="flex bg-muted rounded-md p-0.5 gap-0.5">
+                        {(['rgba', 'hsla', 'hex8'] as const).map(fmt => (
+                            <Button 
+                                key={fmt}
+                                variant={alphaFormat === fmt ? 'secondary' : 'ghost'} 
+                                size="sm" 
+                                className="h-5 text-[10px] px-2 font-mono"
+                                onClick={() => setAlphaFormat(fmt)}
+                            >
+                                {fmt.toUpperCase()}
+                            </Button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Alpha Color Strip with checkerboard */}
+            <div className="relative">
+                {/* Checkerboard background layer */}
+                <div className="flex flex-col md:flex-row h-auto md:h-36" style={{ background: checkerBg }}>
+                    {alphaScale.colors.map((alphaColor, i) => (
+                        <div 
+                            key={i} 
+                            className="flex-1 flex md:flex-col items-center justify-between p-2 md:p-3 relative group cursor-pointer transition-all hover:brightness-110"
+                            style={{ backgroundColor: alphaColor.rgba }}
+                            onClick={() => copyToClipboard(formatAlphaColor(alphaColor, alphaFormat))}
+                            title={`Click to copy ${formatAlphaColor(alphaColor, alphaFormat)}`}
+                        >
+                            {/* Step number */}
+                            <span className={`text-xs font-mono opacity-50 font-bold ${getTextColorClass(isDark, i)}`}>
+                                {i + 1}A
+                            </span>
+                            
+                            {/* Alpha percentage badge */}
+                            <div className="flex flex-col items-center gap-1">
+                                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                                    isDark 
+                                        ? 'bg-white/10 text-white/80' 
+                                        : 'bg-black/10 text-black/70'
+                                }`}>
+                                    {Math.round(alphaColor.alpha * 100)}%
+                                </span>
+                                <span className={`text-[9px] font-mono truncate max-w-full opacity-0 group-hover:opacity-100 transition-opacity ${getTextColorClass(isDark, i)}`}>
+                                    {alphaFormat === 'hex8' ? alphaColor.hex8.replace('#', '') : 
+                                     alphaFormat === 'rgba' ? `${alphaColor.r},${alphaColor.g},${alphaColor.b}` :
+                                     `${Math.round(chroma(alphaColor.r, alphaColor.g, alphaColor.b).get('hsl.h') || 0)}°`}
+                                </span>
+                            </div>
+                            
+                            {/* Copy indicator on hover */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                <div className={`px-2 py-1 rounded text-[10px] font-medium backdrop-blur-sm ${
+                                    isDark ? 'bg-white/20 text-white' : 'bg-black/20 text-white'
+                                }`}>
+                                    <Copy className="h-3 w-3 inline mr-1" />Copy
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            
+            {/* Side-by-side comparison: Solid vs Alpha composited */}
+            <div className="border-t">
+                <div className="px-4 py-2 bg-muted/10 flex items-center gap-2">
+                    <ArrowRightLeft className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Solid vs Alpha Comparison</span>
+                </div>
+                <div className="grid grid-cols-12 gap-0">
+                    {solidColors.map((solidColor, i) => {
+                        const alpha = alphaScale.colors[i];
+                        return (
+                            <div key={i} className="flex flex-col">
+                                {/* Solid color */}
+                                <div className="h-6" style={{ backgroundColor: solidColor }} title={`Solid: ${solidColor}`} />
+                                {/* Alpha composited on background */}
+                                <div className="h-6 relative" style={{ backgroundColor: alphaScale.background }}>
+                                    <div className="absolute inset-0" style={{ backgroundColor: alpha.rgba }} title={`Alpha: ${alpha.rgba}`} />
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+                <div className="grid grid-cols-2 text-[9px] text-muted-foreground border-t text-center">
+                    <div className="p-1 border-r bg-muted/10">Solid</div>
+                    <div className="p-1 bg-muted/10">Alpha (composited)</div>
+                </div>
+            </div>
+
+            {/* Detailed alpha values table */}
+            <div className="border-t">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                        <thead>
+                            <tr className="bg-muted/30 text-muted-foreground">
+                                <th className="p-2 text-left font-medium w-16">Step</th>
+                                <th className="p-2 text-left font-medium">Alpha Value</th>
+                                <th className="p-2 text-left font-medium w-16">Alpha %</th>
+                                <th className="p-2 text-left font-medium w-20">Solid</th>
+                                <th className="p-2 text-center font-medium w-12">Copy</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/50">
+                            {alphaScale.colors.map((alpha, i) => (
+                                <tr key={i} className="hover:bg-muted/20 transition-colors group">
+                                    <td className="p-2">
+                                        <div className="flex items-center gap-2">
+                                            <div 
+                                                className="h-4 w-4 rounded border border-border/50" 
+                                                style={{ 
+                                                    background: checkerBg,
+                                                }}
+                                            >
+                                                <div className="h-full w-full rounded" style={{ backgroundColor: alpha.rgba }} />
+                                            </div>
+                                            <span className="font-mono font-medium">{i + 1}A</span>
+                                        </div>
+                                    </td>
+                                    <td className="p-2">
+                                        <span className="font-mono text-[11px]">
+                                            {formatAlphaColor(alpha, alphaFormat)}
+                                        </span>
+                                    </td>
+                                    <td className="p-2">
+                                        <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                            alpha.alpha <= 0.1 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300' :
+                                            alpha.alpha <= 0.3 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' :
+                                            alpha.alpha <= 0.6 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300' :
+                                            'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
+                                        }`}>
+                                            {Math.round(alpha.alpha * 100)}%
+                                        </span>
+                                    </td>
+                                    <td className="p-2">
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="h-3 w-3 rounded border border-border/50" style={{ backgroundColor: solidColors[i] }} />
+                                            <span className="font-mono text-muted-foreground text-[10px]">{solidColors[i]}</span>
+                                        </div>
+                                    </td>
+                                    <td className="p-2 text-center">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={() => copyToClipboard(formatAlphaColor(alpha, alphaFormat))}
+                                        >
+                                            <Copy className="h-3 w-3" />
+                                        </Button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     );
 }
 

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { PaletteConfig } from './PaletteGenerator';
-import { ColorScale, getContrast, getWCAGRating } from '../../lib/color-utils';
+import { ColorScale, getContrast, getWCAGRating, generateAlphaScale, AlphaColorScale, formatAlphaColor } from '../../lib/color-utils';
 import { Badge } from '../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Button } from '../ui/button';
@@ -22,8 +22,12 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
     const obj: Record<string, Record<string, string>> = {};
     palettes.forEach(p => {
       const colorObj: Record<string, string> = {};
+      const alphaScale = generateAlphaScale(p.scale, p.isDark);
       p.scale.colors.forEach((color, i) => {
          colorObj[`${(i + 1)}`] = color;
+      });
+      alphaScale.colors.forEach((alpha, i) => {
+         colorObj[`a${(i + 1)}`] = alpha.rgba;
       });
       obj[p.name.toLowerCase()] = colorObj;
     });
@@ -39,7 +43,7 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
 
   const downloadGoogleSheetCsv = () => {
     // Detailed CSV format for Google Sheets with proper escaping
-    const headers = ["Token Name", "Hex Value", "Mode", "Palette Name", "Step"];
+    const headers = ["Token Name", "Hex Value", "Alpha (RGBA)", "Alpha (Hex8)", "Alpha %", "Mode", "Palette Name", "Step"];
     
     const escapeCsv = (field: string) => {
         if (field.includes(',') || field.includes('"') || field.includes('\n')) {
@@ -51,10 +55,15 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
     let csvContent = headers.join(",") + "\n";
 
     palettes.forEach(p => {
+        const alphaScale = generateAlphaScale(p.scale, p.isDark);
         p.scale.colors.forEach((color, i) => {
+            const alpha = alphaScale.colors[i];
             const row = [
                 `${p.name}/${i + 1}`,
                 color,
+                alpha.rgba,
+                alpha.hex8,
+                `${Math.round(alpha.alpha * 100)}%`,
                 p.isDark ? 'Dark' : 'Light',
                 p.name,
                 (i + 1).toString()
@@ -112,78 +121,138 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
 
           <Card>
             <CardContent className="p-0">
-                {/* Ramp Visualization */}
-                <div className="flex h-16 w-full">
+                {/* Ramp Visualization - Solid */}
+                <div className="flex h-12 w-full">
                     {palette.scale.colors.map((color, i) => (
                         <div 
                             key={i}
-                            className="flex-1 h-full first:rounded-l-lg last:rounded-r-lg relative group"
+                            className="flex-1 h-full first:rounded-tl-lg last:rounded-tr-lg relative group"
                             style={{ backgroundColor: color }}
                         >
                         </div>
                     ))}
                 </div>
+                {/* Ramp Visualization - Alpha */}
+                {(() => {
+                    const alphaScale = generateAlphaScale(palette.scale, palette.isDark);
+                    const checkerBg = `repeating-conic-gradient(${palette.isDark ? '#1a1a1a' : '#e5e5e5'} 0% 25%, ${palette.isDark ? '#2a2a2a' : '#ffffff'} 0% 50%) 0 0 / 8px 8px`;
+                    return (
+                        <div className="flex h-8 w-full" style={{ background: checkerBg }}>
+                            {alphaScale.colors.map((alpha, i) => (
+                                <div 
+                                    key={i}
+                                    className="flex-1 h-full relative"
+                                    style={{ backgroundColor: alpha.rgba }}
+                                >
+                                </div>
+                            ))}
+                        </div>
+                    );
+                })()}
+                <div className="grid grid-cols-2 text-[9px] text-muted-foreground border-t text-center">
+                    <div className="p-1 border-r bg-muted/10">Solid Scale</div>
+                    <div className="p-1 bg-muted/10">Alpha Scale (on {palette.isDark ? '#111113' : '#FFFFFF'})</div>
+                </div>
 
                 {/* Detailed Table */}
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto border-t">
                     <table className="w-full text-sm text-left">
                         <thead className="bg-muted/30 text-muted-foreground font-medium">
                             <tr>
                                 <th className="p-4 font-medium">Token</th>
                                 <th className="p-4 font-medium">Preview</th>
                                 <th className="p-4 font-medium">HEX</th>
-                                <th className="p-4 font-medium">Contrast (White)</th>
-                                <th className="p-4 font-medium">Contrast (Black)</th>
+                                <th className="p-4 font-medium">Alpha (RGBA)</th>
+                                <th className="p-4 font-medium">α%</th>
+                                <th className="p-4 font-medium">Contrast (W/B)</th>
                                 <th className="p-4 font-medium">Usage</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y">
-                            {palette.scale.colors.map((color, i) => {
-                                const contrastWhite = getContrast(color, '#ffffff');
-                                const contrastBlack = getContrast(color, '#000000');
-                                const whiteRating = getWCAGRating(contrastWhite);
-                                const blackRating = getWCAGRating(contrastBlack);
+                            {(() => {
+                                const alphaScale = generateAlphaScale(palette.scale, palette.isDark);
+                                const checkerBg = `repeating-conic-gradient(${palette.isDark ? '#1a1a1a' : '#e5e5e5'} 0% 25%, ${palette.isDark ? '#2a2a2a' : '#ffffff'} 0% 50%) 0 0 / 6px 6px`;
+                                
+                                return palette.scale.colors.map((color, i) => {
+                                    const alpha = alphaScale.colors[i];
+                                    const contrastWhite = getContrast(color, '#ffffff');
+                                    const contrastBlack = getContrast(color, '#000000');
+                                    const whiteRating = getWCAGRating(contrastWhite);
+                                    const blackRating = getWCAGRating(contrastBlack);
 
-                                return (
-                                    <tr key={i} className="hover:bg-muted/20 transition-colors">
-                                        <td className="p-4 font-mono text-xs">
-                                            {palette.name.toLowerCase()}-{i + 1}
-                                        </td>
-                                        <td className="p-4">
-                                            <div 
-                                                className="h-8 w-12 rounded border shadow-sm" 
-                                                style={{ backgroundColor: color }}
-                                            />
-                                        </td>
-                                        <td className="p-4 font-mono text-muted-foreground">
-                                            {color}
-                                        </td>
-                                        <td className="p-4">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-mono">{contrastWhite.toFixed(2)}</span>
-                                                {whiteRating.label !== 'Fail' && (
-                                                    <Badge variant="secondary" className={`text-[10px] h-5 px-1.5 ${whiteRating.label === 'AAA' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : ''}`}>
-                                                        {whiteRating.label}
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="p-4">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-mono">{contrastBlack.toFixed(2)}</span>
-                                                {blackRating.label !== 'Fail' && (
-                                                    <Badge variant="secondary" className={`text-[10px] h-5 px-1.5 ${blackRating.label === 'AAA' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : ''}`}>
-                                                        {blackRating.label}
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="p-4 text-muted-foreground text-xs">
-                                            {getUsageNote(i)}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
+                                    return (
+                                        <tr key={i} className="hover:bg-muted/20 transition-colors">
+                                            <td className="p-4">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="font-mono text-xs">{palette.name.toLowerCase()}-{i + 1}</span>
+                                                    <span className="font-mono text-[10px] text-muted-foreground">{palette.name.toLowerCase()}-a{i + 1}</span>
+                                                </div>
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="flex items-center gap-1.5">
+                                                    <div 
+                                                        className="h-8 w-8 rounded border shadow-sm" 
+                                                        style={{ backgroundColor: color }}
+                                                        title={`Solid: ${color}`}
+                                                    />
+                                                    <div 
+                                                        className="h-8 w-8 rounded border shadow-sm"
+                                                        style={{ background: checkerBg }}
+                                                        title={`Alpha: ${alpha.rgba}`}
+                                                    >
+                                                        <div className="h-full w-full rounded" style={{ backgroundColor: alpha.rgba }} />
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="p-4 font-mono text-xs text-muted-foreground">
+                                                {color}
+                                            </td>
+                                            <td className="p-4">
+                                                <span className="font-mono text-[11px] text-muted-foreground">
+                                                    {alpha.rgba}
+                                                </span>
+                                            </td>
+                                            <td className="p-4">
+                                                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                                    alpha.alpha <= 0.1 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300' :
+                                                    alpha.alpha <= 0.3 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' :
+                                                    alpha.alpha <= 0.6 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300' :
+                                                    'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
+                                                }`}>
+                                                    {Math.round(alpha.alpha * 100)}%
+                                                </span>
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-[10px] text-muted-foreground/70">W:</span>
+                                                            <span className="font-mono text-xs">{contrastWhite.toFixed(1)}</span>
+                                                            {whiteRating.label !== 'Fail' && (
+                                                                <Badge variant="secondary" className={`text-[9px] h-4 px-1 ${whiteRating.label === 'AAA' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : ''}`}>
+                                                                    {whiteRating.label}
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-[10px] text-muted-foreground/70">B:</span>
+                                                            <span className="font-mono text-xs">{contrastBlack.toFixed(1)}</span>
+                                                            {blackRating.label !== 'Fail' && (
+                                                                <Badge variant="secondary" className={`text-[9px] h-4 px-1 ${blackRating.label === 'AAA' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : ''}`}>
+                                                                    {blackRating.label}
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="p-4 text-muted-foreground text-xs">
+                                                {getUsageNote(i)}
+                                            </td>
+                                        </tr>
+                                    );
+                                });
+                            })()}
                         </tbody>
                     </table>
                 </div>
