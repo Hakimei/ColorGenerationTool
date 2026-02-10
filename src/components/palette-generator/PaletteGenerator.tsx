@@ -317,17 +317,37 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
                          const scaleInfo = getColorScaleInfo(activePalette.baseColor, activePalette.isDark);
                          if (!scaleInfo.isOptimized) return null;
                          
+                         const isDarkScale = activePalette.isDark;
+                         
                          return (
-                             <div className="rounded-lg p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800">
+                             <div className={`rounded-lg p-3 border ${
+                                 isDarkScale 
+                                     ? 'bg-violet-50 dark:bg-violet-950 border-violet-200 dark:border-violet-800'
+                                     : 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800'
+                             }`}>
                                  <div className="flex items-start gap-2">
-                                     <div className="h-5 w-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                         <Check className="h-3 w-3 text-white" />
+                                     <div className={`h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                                         isDarkScale ? 'bg-violet-500' : 'bg-blue-500'
+                                     }`}>
+                                         {isDarkScale ? (
+                                             <Moon className="h-3 w-3 text-white" />
+                                         ) : (
+                                             <Check className="h-3 w-3 text-white" />
+                                         )}
                                      </div>
                                      <div className="flex-1 min-w-0">
-                                         <div className="text-xs font-medium text-blue-900 dark:text-blue-100 capitalize">
-                                             {scaleInfo.scaleType} Optimization Active
+                                         <div className={`text-xs font-medium capitalize ${
+                                             isDarkScale 
+                                                 ? 'text-violet-900 dark:text-violet-100'
+                                                 : 'text-blue-900 dark:text-blue-100'
+                                         }`}>
+                                             {isDarkScale ? 'Radix Dark Mode' : scaleInfo.scaleType} Optimization Active
                                          </div>
-                                         <div className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+                                         <div className={`text-xs mt-0.5 ${
+                                             isDarkScale 
+                                                 ? 'text-violet-700 dark:text-violet-300'
+                                                 : 'text-blue-700 dark:text-blue-300'
+                                         }`}>
                                              {scaleInfo.description}
                                          </div>
                                      </div>
@@ -953,13 +973,8 @@ function PaletteContrast({ colors, isDark }: { colors: string[], isDark: boolean
     );
 }
 
-// Helper to determine text color for contrast based on step index (rough approximation for Radix scales)
+// Helper to determine text color for contrast based on step index (Radix-aware)
 function getTextColorClass(isDarkScale: boolean, stepIndex: number) {
-    // For Light Scale: Steps 1-8 are light (need dark text), 9-12 are dark (need light text).
-    // Exception: Step 9/10 often need white text. Step 11/12 usually dark text again?
-    // Wait, Radix Step 11/12 are TEXT colors. So they are very dark.
-    // Let's simplify:
-    
     if (!isDarkScale) {
         // Light Mode:
         // 1-8: Light bg -> Dark text
@@ -968,10 +983,15 @@ function getTextColorClass(isDarkScale: boolean, stepIndex: number) {
         if (stepIndex >= 8) return "text-white/90";
         return "text-black/70";
     } else {
-        // Dark Mode:
-        // 1-2: Dark bg -> Light text
-        // ...
-        if (stepIndex >= 8) return "text-black/90";
-        return "text-white/70";
+        // Dark Mode (Radix-style):
+        // 1-7: Very dark bg -> Light text
+        // 8: Transitional (still relatively dark) -> Light text
+        // 9-10: Solid brand color -> depends on brand lightness, default to dark
+        // 11: High-lightness colored text -> Dark text
+        // 12: Near-white text -> Dark text
+        if (stepIndex <= 7) return "text-white/70";
+        if (stepIndex >= 10) return "text-black/90";
+        // Steps 9-10 (solid brand): usually mid-lightness, use dark text
+        return "text-black/80";
     }
 }
