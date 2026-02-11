@@ -596,6 +596,29 @@ export function formatAlphaColor(alpha: AlphaColor, format: 'rgba' | 'hsla' | 'h
 }
 
 /**
+ * Returns a Radix-style usage description for a given color step.
+ * Used in JSON token exports and documentation.
+ */
+export function getStepDescription(step: number, paletteName: string, isAlpha: boolean): string {
+  const prefix = isAlpha ? 'Transparent ' : '';
+  const descriptions: Record<number, string> = {
+    1: `${prefix}App background`,
+    2: `${prefix}Subtle background`,
+    3: `${prefix}UI element background`,
+    4: `${prefix}Hovered UI element background`,
+    5: `${prefix}Active / Selected UI element background`,
+    6: `${prefix}Subtle borders and separators`,
+    7: `${prefix}UI element border and focus rings`,
+    8: `${prefix}Hovered UI element border`,
+    9: `${prefix}Solid backgrounds`,
+    10: `${prefix}Hovered solid backgrounds`,
+    11: `${prefix}Low-contrast text`,
+    12: `${prefix}High-contrast text`,
+  };
+  return descriptions[step] || `${paletteName} color step ${step}`;
+}
+
+/**
  * Composites an alpha color over a background to verify visual equivalence
  */
 export function compositeAlphaOver(alphaColor: AlphaColor, backgroundColor: string): string {

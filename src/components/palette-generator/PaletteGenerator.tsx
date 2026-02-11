@@ -1,20 +1,20 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Sliders, Plus, Trash2, Copy, Moon, Sun, RefreshCw, Save, FolderOpen, BookOpen, Edit3, Download, Upload, ArrowUp } from 'lucide-react';
+import { Sliders, Plus, Trash2, Copy, Moon, Sun, Save, FolderOpen, BookOpen, Edit3, Download, Upload, ArrowUp } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Switch } from '../ui/switch';
 import { Slider } from '../ui/slider';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { ScrollArea } from '../ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "../ui/dialog";
-import { generateScale, isValidColor, ColorScale, getContrast, getAPCA, getAPCARating, getWCAGRating, getColorScaleInfo, generateAlphaScale, AlphaColorScale, AlphaColor, formatAlphaColor } from '../../lib/color-utils';
+import { generateScale, ColorScale, getContrast, getAPCA, getAPCARating, getWCAGRating, getColorScaleInfo, generateAlphaScale, AlphaColorScale, formatAlphaColor, getStepDescription } from '../../lib/color-utils';
 import { toast } from 'sonner@2.0.3';
 import chroma from 'chroma-js';
 import { Check, ChevronDown, ArrowRightLeft } from 'lucide-react';
+import { copyToClipboard } from '../../lib/clipboard';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,7 +72,7 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
   }, []);
 
   // Load from localStorage on mount
-  React.useEffect(() => {
+  useEffect(() => {
     const saved = localStorage.getItem('radixgen_presets');
     if (saved) {
       try {
@@ -225,55 +225,6 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    try {
-      // Try the modern Clipboard API first
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text)
-          .then(() => {
-            toast.success("Copied to clipboard!");
-          })
-          .catch((err) => {
-            console.error("Clipboard API failed, trying fallback...", err);
-            fallbackCopy(text);
-          });
-      } else {
-        fallbackCopy(text);
-      }
-    } catch (err) {
-        console.error("Copy failed", err);
-        toast.error("Failed to copy to clipboard");
-    }
-  };
-
-  const fallbackCopy = (text: string) => {
-    try {
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        
-        // Ensure it's not visible but part of the DOM
-        textArea.style.position = "fixed";
-        textArea.style.left = "-9999px";
-        textArea.style.top = "0";
-        
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        
-        const successful = document.execCommand('copy');
-        document.body.removeChild(textArea);
-        
-        if (successful) {
-            toast.success("Copied to clipboard!");
-        } else {
-            throw new Error("execCommand copy failed");
-        }
-    } catch (err) {
-        console.error("Fallback copy failed", err);
-        toast.error("Failed to copy. Please copy manually.");
-    }
-  };
-
   const generateCssVariables = () => {
     let css = ':root {\n';
     css += '  /* Solid Colors */\n';
@@ -293,25 +244,6 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
     return css;
   };
   
-  const getStepDescription = (step: number, paletteName: string, isAlpha: boolean): string => {
-      const prefix = isAlpha ? 'Transparent ' : '';
-      const descriptions: Record<number, string> = {
-          1: `${prefix}App background`,
-          2: `${prefix}Subtle background`,
-          3: `${prefix}UI element background`,
-          4: `${prefix}Hovered UI element background`,
-          5: `${prefix}Active / Selected UI element background`,
-          6: `${prefix}Subtle borders and separators`,
-          7: `${prefix}UI element border and focus rings`,
-          8: `${prefix}Hovered UI element border`,
-          9: `${prefix}Solid backgrounds`,
-          10: `${prefix}Hovered solid backgrounds`,
-          11: `${prefix}Low-contrast text`,
-          12: `${prefix}High-contrast text`,
-      };
-      return descriptions[step] || `${paletteName} color step ${step}`;
-  };
-
   const generateJson = () => {
       const obj: Record<string, Record<string, { value: string; type: string; description: string }>> = {};
       generatedPalettes.forEach(p => {
@@ -735,42 +667,6 @@ function PaletteDisplay({ palette }: { palette: PaletteConfig & { scale: ColorSc
         return generateAlphaScale(palette.scale, palette.isDark);
     }, [palette.scale, palette.isDark]);
 
-    const copyToClipboard = (text: string) => {
-        const fallback = (t: string): boolean => {
-            try {
-                const textArea = document.createElement("textarea");
-                textArea.value = t;
-                textArea.style.position = "fixed";
-                textArea.style.left = "-9999px";
-                textArea.style.top = "0";
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                const successful = document.execCommand('copy');
-                document.body.removeChild(textArea);
-                return successful;
-            } catch {
-                return false;
-            }
-        };
-        try {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text)
-                    .then(() => toast.success("Copied!"))
-                    .catch(() => {
-                        if (fallback(text)) { toast.success("Copied!"); }
-                        else { toast.error("Failed to copy. Please copy manually."); }
-                    });
-            } else {
-                if (fallback(text)) { toast.success("Copied!"); }
-                else { toast.error("Failed to copy. Please copy manually."); }
-            }
-        } catch {
-            if (fallback(text)) { toast.success("Copied!"); }
-            else { toast.error("Failed to copy. Please copy manually."); }
-        }
-    };
-
     return (
         <Card id={`palette-${palette.id}`} className="overflow-hidden border-0 shadow-sm bg-background">
             <CardHeader className="pb-4 border-b bg-muted/10">
@@ -927,52 +823,6 @@ function AlphaScaleView({
     alphaFormat: 'rgba' | 'hsla' | 'hex8';
     setAlphaFormat: (f: 'rgba' | 'hsla' | 'hex8') => void;
 }) {
-    const copyToClipboard = (text: string) => {
-        const fallback = (t: string): boolean => {
-            try {
-                const textArea = document.createElement("textarea");
-                textArea.value = t;
-                textArea.style.position = "fixed";
-                textArea.style.left = "-9999px";
-                textArea.style.top = "0";
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                const successful = document.execCommand('copy');
-                document.body.removeChild(textArea);
-                return successful;
-            } catch {
-                return false;
-            }
-        };
-
-        try {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text)
-                    .then(() => toast.success("Copied!"))
-                    .catch(() => {
-                        if (fallback(text)) {
-                            toast.success("Copied!");
-                        } else {
-                            toast.error("Failed to copy. Please copy manually.");
-                        }
-                    });
-            } else {
-                if (fallback(text)) {
-                    toast.success("Copied!");
-                } else {
-                    toast.error("Failed to copy. Please copy manually.");
-                }
-            }
-        } catch {
-            if (fallback(text)) {
-                toast.success("Copied!");
-            } else {
-                toast.error("Failed to copy. Please copy manually.");
-            }
-        }
-    };
-
     // Checkerboard pattern for transparency visualization
     const checkerBg = `repeating-conic-gradient(${isDark ? '#1a1a1a' : '#e5e5e5'} 0% 25%, ${isDark ? '#2a2a2a' : '#ffffff'} 0% 50%) 0 0 / 12px 12px`;
     

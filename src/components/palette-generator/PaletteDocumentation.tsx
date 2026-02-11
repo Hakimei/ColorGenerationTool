@@ -1,11 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import { PaletteConfig } from './PaletteGenerator';
-import { ColorScale, getContrast, getWCAGRating, generateAlphaScale, AlphaColorScale, formatAlphaColor } from '../../lib/color-utils';
+import { ColorScale, getContrast, getWCAGRating, generateAlphaScale } from '../../lib/color-utils';
 import { Badge } from '../ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Copy, Download, Moon, Sun, FileJson, Type } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { Moon, Sun, Type } from 'lucide-react';
 
 interface PaletteDocumentationProps {
   palettes: (PaletteConfig & { scale: ColorScale })[];
@@ -13,109 +12,7 @@ interface PaletteDocumentationProps {
 
 export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
 
-  const fallbackCopy = (text: string) => {
-    try {
-      const textArea = document.createElement("textarea");
-      textArea.value = text;
-      textArea.style.position = "fixed";
-      textArea.style.left = "-9999px";
-      textArea.style.top = "0";
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      const successful = document.execCommand('copy');
-      document.body.removeChild(textArea);
-      if (successful) {
-        return true;
-      }
-      return false;
-    } catch {
-      return false;
-    }
-  };
-
-  const copyToClipboard = (text: string, label: string) => {
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text)
-          .then(() => {
-            toast.success(`Copied ${label} to clipboard`);
-          })
-          .catch(() => {
-            if (fallbackCopy(text)) {
-              toast.success(`Copied ${label} to clipboard`);
-            } else {
-              toast.error("Failed to copy. Please copy manually.");
-            }
-          });
-      } else {
-        if (fallbackCopy(text)) {
-          toast.success(`Copied ${label} to clipboard`);
-        } else {
-          toast.error("Failed to copy. Please copy manually.");
-        }
-      }
-    } catch {
-      if (fallbackCopy(text)) {
-        toast.success(`Copied ${label} to clipboard`);
-      } else {
-        toast.error("Failed to copy. Please copy manually.");
-      }
-    }
-  };
-
-  const getStepDescription = (step: number, paletteName: string, isAlpha: boolean): string => {
-      const prefix = isAlpha ? 'Transparent ' : '';
-      const descriptions: Record<number, string> = {
-          1: `${prefix}App background`,
-          2: `${prefix}Subtle background`,
-          3: `${prefix}UI element background`,
-          4: `${prefix}Hovered UI element background`,
-          5: `${prefix}Active / Selected UI element background`,
-          6: `${prefix}Subtle borders and separators`,
-          7: `${prefix}UI element border and focus rings`,
-          8: `${prefix}Hovered UI element border`,
-          9: `${prefix}Solid backgrounds`,
-          10: `${prefix}Hovered solid backgrounds`,
-          11: `${prefix}Low-contrast text`,
-          12: `${prefix}High-contrast text`,
-      };
-      return descriptions[step] || `${paletteName} color step ${step}`;
-  };
-
-  const downloadJson = () => {
-    const obj: Record<string, Record<string, { value: string; type: string; description: string }>> = {};
-    palettes.forEach(p => {
-      const tokens: Record<string, { value: string; type: string; description: string }> = {};
-      const alphaScale = generateAlphaScale(p.scale, p.isDark);
-      p.scale.colors.forEach((color, i) => {
-         tokens[`${(i + 1)}`] = {
-             value: color,
-             type: 'color',
-             description: getStepDescription(i + 1, p.name, false),
-         };
-      });
-      alphaScale.colors.forEach((alpha, i) => {
-         tokens[`a${(i + 1)}`] = {
-             value: alpha.rgba,
-             type: 'color',
-             description: getStepDescription(i + 1, p.name, true),
-         };
-      });
-      obj[p.name.toLowerCase()] = tokens;
-    });
-    
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj, null, 2));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "design-tokens.json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-  };
-
   const downloadGoogleSheetCsv = () => {
-    // Detailed CSV format for Google Sheets with proper escaping
     const headers = ["Token Name", "Hex Value", "Alpha (RGBA)", "Alpha (Hex8)", "Alpha %", "Mode", "Palette Name", "Step"];
     
     const escapeCsv = (field: string) => {
@@ -236,7 +133,7 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
                                 <th className="px-3 py-2 font-medium">Preview</th>
                                 <th className="px-3 py-2 font-medium">HEX</th>
                                 <th className="px-3 py-2 font-medium">Alpha (RGBA)</th>
-                                <th className="px-3 py-2 font-medium">α%</th>
+                                <th className="px-3 py-2 font-medium">&alpha;%</th>
                                 <th className="px-3 py-2 font-medium">Contrast (W/B)</th>
                                 <th className="px-3 py-2 font-medium">Usage</th>
                             </tr>
