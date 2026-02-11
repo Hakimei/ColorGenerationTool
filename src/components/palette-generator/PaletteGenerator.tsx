@@ -202,7 +202,7 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
       }
     }, 50);
     return () => clearTimeout(timer);
-  }, [activePaletteId, activeView]);
+  }, [activePaletteId]);
 
   const updatePalette = (id: string, updates: Partial<PaletteConfig>) => {
     setPalettes(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
