@@ -64,18 +64,45 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
     }
   };
 
+  const getStepDescription = (step: number, paletteName: string, isAlpha: boolean): string => {
+      const prefix = isAlpha ? 'Transparent ' : '';
+      const descriptions: Record<number, string> = {
+          1: `${prefix}App background`,
+          2: `${prefix}Subtle background`,
+          3: `${prefix}UI element background`,
+          4: `${prefix}Hovered UI element background`,
+          5: `${prefix}Active / Selected UI element background`,
+          6: `${prefix}Subtle borders and separators`,
+          7: `${prefix}UI element border and focus rings`,
+          8: `${prefix}Hovered UI element border`,
+          9: `${prefix}Solid backgrounds`,
+          10: `${prefix}Hovered solid backgrounds`,
+          11: `${prefix}Low-contrast text`,
+          12: `${prefix}High-contrast text`,
+      };
+      return descriptions[step] || `${paletteName} color step ${step}`;
+  };
+
   const downloadJson = () => {
-    const obj: Record<string, Record<string, string>> = {};
+    const obj: Record<string, Record<string, { value: string; type: string; description: string }>> = {};
     palettes.forEach(p => {
-      const colorObj: Record<string, string> = {};
+      const tokens: Record<string, { value: string; type: string; description: string }> = {};
       const alphaScale = generateAlphaScale(p.scale, p.isDark);
       p.scale.colors.forEach((color, i) => {
-         colorObj[`${(i + 1)}`] = color;
+         tokens[`${(i + 1)}`] = {
+             value: color,
+             type: 'color',
+             description: getStepDescription(i + 1, p.name, false),
+         };
       });
       alphaScale.colors.forEach((alpha, i) => {
-         colorObj[`a${(i + 1)}`] = alpha.rgba;
+         tokens[`a${(i + 1)}`] = {
+             value: alpha.rgba,
+             type: 'color',
+             description: getStepDescription(i + 1, p.name, true),
+         };
       });
-      obj[p.name.toLowerCase()] = colorObj;
+      obj[p.name.toLowerCase()] = tokens;
     });
     
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj, null, 2));
@@ -131,8 +158,8 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
   };
 
   return (
-    <div className="space-y-12 pb-20">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-6">
+    <div className="space-y-8 pb-16">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b pb-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Color Reference</h1>
           <p className="text-muted-foreground mt-1">
@@ -147,11 +174,11 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
       </div>
 
       {palettes.map((palette) => (
-        <section key={palette.id} id={`palette-${palette.id}`} className="space-y-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
+        <section key={palette.id} id={`palette-${palette.id}`} className="space-y-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2.5">
                 <div 
-                    className="h-6 w-6 rounded-md border shadow-sm" 
+                    className="h-5 w-5 rounded-md border shadow-sm" 
                     style={{ backgroundColor: palette.baseColor }}
                 />
                 <h2 className="text-2xl font-semibold">{palette.name}</h2>
@@ -168,7 +195,7 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
           <Card>
             <CardContent className="p-0">
                 {/* Ramp Visualization - Solid */}
-                <div className="flex h-12 w-full">
+                <div className="flex h-10 w-full">
                     {palette.scale.colors.map((color, i) => (
                         <div 
                             key={i}
@@ -183,7 +210,7 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
                     const alphaScale = generateAlphaScale(palette.scale, palette.isDark);
                     const checkerBg = `repeating-conic-gradient(${palette.isDark ? '#1a1a1a' : '#e5e5e5'} 0% 25%, ${palette.isDark ? '#2a2a2a' : '#ffffff'} 0% 50%) 0 0 / 8px 8px`;
                     return (
-                        <div className="flex h-8 w-full" style={{ background: checkerBg }}>
+                        <div className="flex h-6 w-full" style={{ background: checkerBg }}>
                             {alphaScale.colors.map((alpha, i) => (
                                 <div 
                                     key={i}
@@ -205,13 +232,13 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
                     <table className="w-full text-sm text-left">
                         <thead className="bg-muted/30 text-muted-foreground font-medium">
                             <tr>
-                                <th className="p-4 font-medium">Token</th>
-                                <th className="p-4 font-medium">Preview</th>
-                                <th className="p-4 font-medium">HEX</th>
-                                <th className="p-4 font-medium">Alpha (RGBA)</th>
-                                <th className="p-4 font-medium">α%</th>
-                                <th className="p-4 font-medium">Contrast (W/B)</th>
-                                <th className="p-4 font-medium">Usage</th>
+                                <th className="px-3 py-2 font-medium">Token</th>
+                                <th className="px-3 py-2 font-medium">Preview</th>
+                                <th className="px-3 py-2 font-medium">HEX</th>
+                                <th className="px-3 py-2 font-medium">Alpha (RGBA)</th>
+                                <th className="px-3 py-2 font-medium">α%</th>
+                                <th className="px-3 py-2 font-medium">Contrast (W/B)</th>
+                                <th className="px-3 py-2 font-medium">Usage</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y">
@@ -228,13 +255,13 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
 
                                     return (
                                         <tr key={i} className="hover:bg-muted/20 transition-colors">
-                                            <td className="p-4">
+                                            <td className="px-3 py-2">
                                                 <div className="flex flex-col gap-0.5">
                                                     <span className="font-mono text-xs">{palette.name.toLowerCase()}-{i + 1}</span>
                                                     <span className="font-mono text-[10px] text-muted-foreground">{palette.name.toLowerCase()}-a{i + 1}</span>
                                                 </div>
                                             </td>
-                                            <td className="p-4">
+                                            <td className="px-3 py-2">
                                                 <div className="flex items-center gap-1.5">
                                                     <div 
                                                         className="h-8 w-8 rounded border shadow-sm" 
@@ -250,15 +277,15 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="p-4 font-mono text-xs text-muted-foreground">
+                                            <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
                                                 {color}
                                             </td>
-                                            <td className="p-4">
+                                            <td className="px-3 py-2">
                                                 <span className="font-mono text-[11px] text-muted-foreground">
                                                     {alpha.rgba}
                                                 </span>
                                             </td>
-                                            <td className="p-4">
+                                            <td className="px-3 py-2">
                                                 <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${
                                                     alpha.alpha <= 0.1 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300' :
                                                     alpha.alpha <= 0.3 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' :
@@ -268,7 +295,7 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
                                                     {Math.round(alpha.alpha * 100)}%
                                                 </span>
                                             </td>
-                                            <td className="p-4">
+                                            <td className="px-3 py-2">
                                                 <div className="flex items-center gap-2">
                                                     <div className="flex flex-col gap-0.5">
                                                         <div className="flex items-center gap-1">
@@ -292,7 +319,7 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="p-4 text-muted-foreground text-xs">
+                                            <td className="px-3 py-2 text-muted-foreground text-xs">
                                                 {getUsageNote(i)}
                                             </td>
                                         </tr>
@@ -306,23 +333,23 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
           </Card>
 
             {/* Preview Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Light Theme Simulation using this scale */}
             <Card className="overflow-hidden">
-                <CardHeader className="pb-2">
+                <CardHeader className="pb-1.5">
                     <CardTitle className="text-sm font-medium text-muted-foreground">Component Preview</CardTitle>
                 </CardHeader>
-                <CardContent className="p-6 space-y-4" style={{ backgroundColor: palette.isDark ? '#18181b' : '#ffffff' }}>
+                <CardContent className="p-4 space-y-3" style={{ backgroundColor: palette.isDark ? '#18181b' : '#ffffff' }}>
                     <div 
-                        className="p-4 rounded-lg border space-y-3"
+                        className="p-3 rounded-lg border space-y-2"
                         style={{ 
                             backgroundColor: palette.scale.colors[1], 
                             borderColor: palette.scale.colors[5] 
                         }}
                     >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2.5">
                             <div 
-                                className="h-10 w-10 rounded-full flex items-center justify-center"
+                                className="h-9 w-9 rounded-full flex items-center justify-center"
                                 style={{ backgroundColor: palette.scale.colors[2] }}
                             >
                                 <div className="h-5 w-5 rounded-full" style={{ backgroundColor: palette.scale.colors[10] }} />
@@ -333,7 +360,7 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
                             </div>
                         </div>
                         
-                        <div className="flex gap-2 mt-4">
+                        <div className="flex gap-2 mt-3">
                             <button 
                                 className="px-4 py-2 rounded text-sm font-medium transition-colors"
                                 style={{ 
@@ -359,10 +386,10 @@ export function PaletteDocumentation({ palettes }: PaletteDocumentationProps) {
             </Card>
             
             <Card>
-                <CardHeader className="pb-2">
+                <CardHeader className="pb-1.5">
                     <CardTitle className="text-sm font-medium text-muted-foreground">Typography & Hierarchy</CardTitle>
                 </CardHeader>
-                <CardContent className="p-6 space-y-2" style={{ backgroundColor: palette.scale.colors[0] }}>
+                <CardContent className="p-4 space-y-1.5" style={{ backgroundColor: palette.scale.colors[0] }}>
                     <h3 className="text-2xl font-bold" style={{ color: palette.scale.colors[11] }}>
                         The quick brown fox
                     </h3>

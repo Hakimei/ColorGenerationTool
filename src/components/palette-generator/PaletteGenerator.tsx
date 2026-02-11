@@ -293,14 +293,46 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
     return css;
   };
   
+  const getStepDescription = (step: number, paletteName: string, isAlpha: boolean): string => {
+      const prefix = isAlpha ? 'Transparent ' : '';
+      const descriptions: Record<number, string> = {
+          1: `${prefix}App background`,
+          2: `${prefix}Subtle background`,
+          3: `${prefix}UI element background`,
+          4: `${prefix}Hovered UI element background`,
+          5: `${prefix}Active / Selected UI element background`,
+          6: `${prefix}Subtle borders and separators`,
+          7: `${prefix}UI element border and focus rings`,
+          8: `${prefix}Hovered UI element border`,
+          9: `${prefix}Solid backgrounds`,
+          10: `${prefix}Hovered solid backgrounds`,
+          11: `${prefix}Low-contrast text`,
+          12: `${prefix}High-contrast text`,
+      };
+      return descriptions[step] || `${paletteName} color step ${step}`;
+  };
+
   const generateJson = () => {
-      const obj: Record<string, { solid: string[], alpha: string[] }> = {};
+      const obj: Record<string, Record<string, { value: string; type: string; description: string }>> = {};
       generatedPalettes.forEach(p => {
+          const name = p.name.toLowerCase().replace(/\s+/g, '-');
           const alphaScale = generateAlphaScale(p.scale, p.isDark);
-          obj[p.name] = {
-              solid: p.scale.colors,
-              alpha: alphaScale.colors.map(a => a.rgba),
-          };
+          const tokens: Record<string, { value: string; type: string; description: string }> = {};
+          p.scale.colors.forEach((color, i) => {
+              tokens[`${i + 1}`] = {
+                  value: color,
+                  type: 'color',
+                  description: getStepDescription(i + 1, p.name, false),
+              };
+          });
+          alphaScale.colors.forEach((alpha, i) => {
+              tokens[`a${i + 1}`] = {
+                  value: alpha.rgba,
+                  type: 'color',
+                  description: getStepDescription(i + 1, p.name, true),
+              };
+          });
+          obj[name] = tokens;
       });
       return JSON.stringify(obj, null, 2);
   };
@@ -317,6 +349,14 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
             <span className="text-xl font-semibold tracking-tight">Lumina</span>
             <span className="px-1.5 py-0.5 text-[10px] font-medium bg-primary/10 text-primary rounded border border-primary/20">Beta</span>
           </div>
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={toggleDarkMode}
+            className="h-7 w-7 hover:bg-primary/10"
+          >
+            {isDarkMode ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+          </Button>
         </div>
 
         <div className="space-y-4">
@@ -505,175 +545,157 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
       <div ref={mainContentRef} className="flex-1 overflow-y-auto p-8 bg-background relative">
         <div className="max-w-5xl mx-auto space-y-8">
             
-            {/* Header */}
-            <div className="flex flex-col gap-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Palette Generator</h1>
-                        <p className="text-muted-foreground">Radix-style color scales for your next project.</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={toggleDarkMode}
-                            className="h-9 w-9 hover:bg-primary/10"
-                        >
-                            {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                        </Button>
-                        <div className="flex bg-muted/50 p-1 rounded-lg border">
-                            <Button 
-                                variant={activeView === 'editor' ? 'secondary' : 'ghost'} 
-                                size="sm"
-                                onClick={() => setActiveView('editor')}
-                                className="gap-2 px-4"
-                            >
-                                <Edit3 className="h-4 w-4" /> Editor
-                            </Button>
-                            <Button 
-                                variant={activeView === 'docs' ? 'secondary' : 'ghost'} 
-                                size="sm"
-                                onClick={() => setActiveView('docs')}
-                                className="gap-2 px-4"
-                            >
-                                <BookOpen className="h-4 w-4" /> Docs
-                            </Button>
-                        </div>
-                    </div>
+            {/* Header Bar */}
+            <div className="flex items-center justify-between pb-6 border-b">
+                <div className="flex bg-muted/50 p-1 rounded-lg border">
+                    <Button 
+                        variant={activeView === 'editor' ? 'secondary' : 'ghost'} 
+                        size="sm"
+                        onClick={() => setActiveView('editor')}
+                        className="gap-2 px-4"
+                    >
+                        <Edit3 className="h-4 w-4" /> Editor
+                    </Button>
+                    <Button 
+                        variant={activeView === 'docs' ? 'secondary' : 'ghost'} 
+                        size="sm"
+                        onClick={() => setActiveView('docs')}
+                        className="gap-2 px-4"
+                    >
+                        <BookOpen className="h-4 w-4" /> Docs
+                    </Button>
                 </div>
-                
-                {activeView === 'editor' && (
-                    <div className="flex justify-end gap-2 pb-4 border-b">
-                         <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="gap-2">
-                                    <Copy className="h-4 w-4" /> Export CSS
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[400px] p-0" align="end">
-                                <div className="p-4 bg-muted border-b flex justify-between items-center">
-                                    <span className="font-medium text-sm">CSS Variables</span>
-                                    <Button size="sm" variant="ghost" onClick={() => copyToClipboard(generateCssVariables())}>Copy</Button>
-                                </div>
-                                <pre className="p-4 text-xs overflow-auto max-h-[300px] bg-zinc-950 text-zinc-50">
-                                    {generateCssVariables()}
-                                </pre>
-                            </PopoverContent>
-                        </Popover>
-                        
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="gap-2">
-                                    <Copy className="h-4 w-4" /> Export JSON
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[400px] p-0" align="end">
-                                <div className="p-4 bg-muted border-b flex justify-between items-center">
-                                    <span className="font-medium text-sm">JSON</span>
-                                    <Button size="sm" variant="ghost" onClick={() => copyToClipboard(generateJson())}>Copy</Button>
-                                </div>
-                                <pre className="p-4 text-xs overflow-auto max-h-[300px] bg-zinc-950 text-zinc-50">
-                                    {generateJson()}
-                                </pre>
-                            </PopoverContent>
-                        </Popover>
 
-                        <div className="h-4 w-px bg-border mx-2" />
+                <div className="flex items-center gap-2">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className="gap-2">
+                                <Copy className="h-4 w-4" /> Export CSS
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[400px] p-0" align="end">
+                            <div className="p-4 bg-muted border-b flex justify-between items-center">
+                                <span className="font-medium text-sm">CSS Variables</span>
+                                <Button size="sm" variant="ghost" onClick={() => copyToClipboard(generateCssVariables())}>Copy</Button>
+                            </div>
+                            <pre className="p-4 text-xs overflow-auto max-h-[300px] bg-zinc-950 text-zinc-50">
+                                {generateCssVariables()}
+                            </pre>
+                        </PopoverContent>
+                    </Popover>
+                    
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className="gap-2">
+                                <Copy className="h-4 w-4" /> Export JSON
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[400px] p-0" align="end">
+                            <div className="p-4 bg-muted border-b flex justify-between items-center">
+                                <span className="font-medium text-sm">JSON</span>
+                                <Button size="sm" variant="ghost" onClick={() => copyToClipboard(generateJson())}>Copy</Button>
+                            </div>
+                            <pre className="p-4 text-xs overflow-auto max-h-[300px] bg-zinc-950 text-zinc-50">
+                                {generateJson()}
+                            </pre>
+                        </PopoverContent>
+                    </Popover>
 
-                        <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" className="gap-2">
-                                    <Save className="h-4 w-4" /> Save
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Save Preset</DialogTitle>
-                                    <DialogDescription>
-                                        Save your current palette configuration to access it later.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <div className="grid gap-4 py-4">
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="name" className="text-right">
-                                            Name
-                                        </Label>
-                                        <Input
-                                            id="name"
-                                            value={newPresetName}
-                                            onChange={(e) => setNewPresetName(e.target.value)}
-                                            className="col-span-3"
-                                            placeholder="My Awesome Theme"
-                                        />
+                    <div className="h-9 w-px bg-border mx-1" />
+
+                    <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="gap-2">
+                                <Save className="h-4 w-4" /> Save
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Save Preset</DialogTitle>
+                                <DialogDescription>
+                                    Save your current palette configuration to access it later.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="name" className="text-right">
+                                        Name
+                                    </Label>
+                                    <Input
+                                        id="name"
+                                        value={newPresetName}
+                                        onChange={(e) => setNewPresetName(e.target.value)}
+                                        className="col-span-3"
+                                        placeholder="My Awesome Theme"
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button onClick={savePreset}>Save Preset</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="gap-2">
+                                <FolderOpen className="h-4 w-4" /> Load
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Saved Presets</DialogTitle>
+                                <DialogDescription>
+                                    Manage your saved palette configurations.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <ScrollArea className="h-[300px] pr-4">
+                                {savedPresets.length === 0 ? (
+                                    <div className="text-center py-8 text-muted-foreground">
+                                        No saved presets found.
                                     </div>
-                                </div>
-                                <DialogFooter>
-                                    <Button onClick={savePreset}>Save Preset</Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-
-                        <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" className="gap-2">
-                                    <FolderOpen className="h-4 w-4" /> Load
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-md">
-                                <DialogHeader>
-                                    <DialogTitle>Saved Presets</DialogTitle>
-                                    <DialogDescription>
-                                        Manage your saved palette configurations.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <ScrollArea className="h-[300px] pr-4">
-                                    {savedPresets.length === 0 ? (
-                                        <div className="text-center py-8 text-muted-foreground">
-                                            No saved presets found.
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col gap-2">
-                                            {savedPresets.map((preset) => (
-                                                <div 
-                                                    key={preset.id} 
-                                                    className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                                                >
-                                                    <div className="flex flex-col gap-1 cursor-pointer flex-1" onClick={() => loadPreset(preset)}>
-                                                        <span className="font-medium">{preset.name}</span>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {new Date(preset.createdAt).toLocaleDateString()} • {preset.palettes.length} scales
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <Button variant="ghost" size="sm" onClick={() => loadPreset(preset)}>
-                                                            Load
-                                                        </Button>
-                                                        <Button 
-                                                            variant="ghost" 
-                                                            size="icon" 
-                                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                                            onClick={() => deletePreset(preset.id)}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-2">
+                                        {savedPresets.map((preset) => (
+                                            <div 
+                                                key={preset.id} 
+                                                className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                                            >
+                                                <div className="flex flex-col gap-1 cursor-pointer flex-1" onClick={() => loadPreset(preset)}>
+                                                    <span className="font-medium">{preset.name}</span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {new Date(preset.createdAt).toLocaleDateString()} • {preset.palettes.length} scales
+                                                    </span>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </ScrollArea>
-                                <div className="flex items-center gap-2 pt-4 border-t">
-                                    <Button variant="outline" size="sm" className="gap-2 flex-1" onClick={exportPresets} disabled={savedPresets.length === 0}>
-                                        <Download className="h-3.5 w-3.5" /> Export All
-                                    </Button>
-                                    <Button variant="outline" size="sm" className="gap-2 flex-1" onClick={importPresets}>
-                                        <Upload className="h-3.5 w-3.5" /> Import
-                                    </Button>
-                                </div>
-                            </DialogContent>
-                        </Dialog>
-                    </div>
-                )}
+                                                <div className="flex items-center gap-2">
+                                                    <Button variant="ghost" size="sm" onClick={() => loadPreset(preset)}>
+                                                        Load
+                                                    </Button>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                                        onClick={() => deletePreset(preset.id)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </ScrollArea>
+                            <div className="flex items-center gap-2 pt-4 border-t">
+                                <Button variant="outline" size="sm" className="gap-2 flex-1" onClick={exportPresets} disabled={savedPresets.length === 0}>
+                                    <Download className="h-3.5 w-3.5" /> Export All
+                                </Button>
+                                <Button variant="outline" size="sm" className="gap-2 flex-1" onClick={importPresets}>
+                                    <Upload className="h-3.5 w-3.5" /> Import
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
 
             {/* Scales / Docs */}
