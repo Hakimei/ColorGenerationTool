@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Sliders, Plus, Trash2, Copy, Moon, Sun, Save, FolderOpen, BookOpen, Edit3, Download, Upload, ArrowUp } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -533,8 +533,6 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
                         </PopoverContent>
                     </Popover>
 
-                    <div className="h-9 w-px bg-border mx-1" />
-
                     <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
                         <DialogTrigger asChild>
                             <Button variant="outline" className="gap-2">
@@ -668,8 +666,8 @@ function PaletteDisplay({ palette }: { palette: PaletteConfig & { scale: ColorSc
     }, [palette.scale, palette.isDark]);
 
     return (
-        <Card id={`palette-${palette.id}`} className="overflow-hidden border-0 shadow-sm bg-background">
-            <CardHeader className="pb-4 border-b bg-muted/10">
+        <Card id={`palette-${palette.id}`} className="overflow-hidden border shadow-sm rounded-xl">
+            <CardHeader className="pb-4 border-b">
                 <div className="flex items-center justify-between">
                      <div className="flex items-center gap-2">
                         <div className="h-4 w-4 rounded-full" style={{ backgroundColor: palette.baseColor }} />
@@ -710,7 +708,7 @@ function PaletteDisplay({ palette }: { palette: PaletteConfig & { scale: ColorSc
                 {view === 'scale' ? (
                     <>
                         {/* Color Strip */}
-                        <div className="flex flex-col md:flex-row h-auto md:h-32 divide-y md:divide-y-0 md:divide-x divide-border/50">
+                        <div className="flex flex-col md:flex-row h-auto md:h-32 divide-y md:divide-y-0 md:divide-x divide-black/5 dark:divide-white/5">
                             {palette.scale.colors.map((color, i) => (
                                 <div 
                                     key={i} 
@@ -1194,7 +1192,7 @@ function PaletteContrast({ colors, isDark }: { colors: string[], isDark: boolean
                             
                             {/* Matrix rows */}
                             {colors.map((bgColor, bgIndex) => (
-                                <React.Fragment key={`row-${bgIndex}`}>
+                                <div key={`row-${bgIndex}`} style={{ display: 'contents' }}>
                                     {/* Row header (Background color) */}
                                     <div className="border border-border bg-muted/30 flex items-center justify-center p-2">
                                         <div className="flex items-center gap-2">
@@ -1237,7 +1235,7 @@ function PaletteContrast({ colors, isDark }: { colors: string[], isDark: boolean
                                             </div>
                                         );
                                     })}
-                                </React.Fragment>
+                                </div>
                             ))}
                         </div>
                         
