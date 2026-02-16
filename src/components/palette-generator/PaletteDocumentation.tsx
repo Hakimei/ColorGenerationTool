@@ -164,7 +164,9 @@ export function PaletteDocumentation({
                       <div
                         key={i}
                         className="flex-1 h-full relative"
-                        style={{ backgroundColor: alpha.rgba }}
+                        style={{
+                          backgroundColor: alpha.rgba,
+                        }}
                       ></div>
                     ))}
                   </div>
@@ -176,7 +178,7 @@ export function PaletteDocumentation({
                 </div>
                 <div className="p-1 bg-muted/10">
                   Alpha Scale (on{" "}
-                  {palette.isDark ? "#111113" : "#FFFFFF"})
+                  {palette.isDark ? "#111111" : "#FFFFFF"})
                 </div>
               </div>
 
