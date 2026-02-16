@@ -47,6 +47,15 @@ export function PaletteGenerator({ isDarkMode, toggleDarkMode }: { isDarkMode: b
     { id: '2', name: 'Neutral', baseColor: '#71717a', isDark: false, hueShift: 0, saturationScale: 1 },
   ]);
 
+  // Sync all palettes' isDark when the app-level dark mode toggle changes
+  const prevIsDarkMode = useRef(isDarkMode);
+  useEffect(() => {
+    if (prevIsDarkMode.current !== isDarkMode) {
+      prevIsDarkMode.current = isDarkMode;
+      setPalettes(prev => prev.map(p => ({ ...p, isDark: isDarkMode })));
+    }
+  }, [isDarkMode]);
+
   const [activePaletteId, setActivePaletteId] = useState<string>('1');
   const [activeView, setActiveView] = useState<'editor' | 'docs'>('editor');
   const [savedPresets, setSavedPresets] = useState<SavedPreset[]>([]);
